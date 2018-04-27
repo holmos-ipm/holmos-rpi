@@ -35,11 +35,11 @@ class CameraArbiter:
         if self.proc is not None:
             self.proc.terminate()
         self.streamActive = True
-        self.proc = subprocess.Popen(['/usr/src/mjpg-streamer/mjpg-streamer-experimental/mjpg_streamer',
+        self.proc = subprocess.Popen(['mjpg_streamer',
                                      '-o',
-                                     '/usr/src/mjpg-streamer/mjpg-streamer-experimental/output_http.so -w /usr/src/mjpg-streamer/mjpg-streamer-experimental/www',
+                                     'output_http.so',
                                      '-i',
-                                     '/usr/src/mjpg-streamer/mjpg-streamer-experimental/input_raspicam.so -x 1024 -y 1024 -fps 15 -ex auto -quality 99'])
+                                     'input_raspicam.so -x 1024 -y 1024 -fps 15'])
         time.sleep(1.5)  # TODO: find better fix for the stream warm up problem
 
     def deactivate_stream(self):
