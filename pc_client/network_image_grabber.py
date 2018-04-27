@@ -11,6 +11,7 @@ import socket
 from PIL import Image
 import io
 
+from mjpeg_stream_client import get_array_from_mjpeg_stream
 
 class RemoteImageGrabber(QThread):
 
@@ -23,7 +24,7 @@ class RemoteImageGrabber(QThread):
         try:
             start = self.server.is_online()
         except socket.error:
-            print("Error: Could not connect to  "+remote_server+". Can you ping the rpi?")
+            print("Error: Could not connect to "+remote_server+". Can you ping the rpi? Is the sever script running?")
         except:
             print("Error connecting - is the server script running on the rpi?")
 
@@ -48,24 +49,24 @@ class RemoteImageGrabber(QThread):
     def fetch_images(self):
         """ get images from the mjpeg_streamer"""
         mjpeg_available = self.server.activate_stream(True)
+        if mjpeg_available:
+            print("started mjpeg stream.")
         while not self.stopping:
             if mjpeg_available:
-                stream = urllib.request.urlopen('http://'+self.remote_server+':8080/?action=stream')
+                print("opening url")
+                proxies = {}
+                opener = urllib.request.URLopener(proxies)
+                stream = opener.open('http://'+self.remote_server+':8080/?action=stream')
                 byte_array = b''
+                # https://stackoverflow.com/questions/21702477/how-to-parse-mjpeg-http-stream-from-ip-camera
                 while True:
-                    byte_array += stream.read(1024)
-                    a = byte_array.find(b'\xff\xd8')
-                    b = byte_array.find(b'\xff\xd9')
-                    if a != -1 and b != -1:
-                        jpg = byte_array[a:b + 2]
-                        byte_array = byte_array[b + 2:]
-                        byte_stream = io.BytesIO(jpg)
-                        i = numpy.array(Image.open(byte_stream))[:, :, 0]
-                        self.refresh_preview.emit(i)
-                        if self.stopping:
-                            stream.close()
-                            self.server.deactivate_stream()
-                            break
+                    image = get_array_from_mjpeg_stream(stream)
+                    if image is not None:
+                        self.refresh_preview.emit(image)
+                    if self.stopping:
+                        stream.close()
+                        self.server.deactivate_stream()
+                        break
             else:
                 while True:
                     start = time.time()
