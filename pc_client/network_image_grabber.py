@@ -3,21 +3,23 @@
 
 import urllib.request
 import xmlrpc.client
-from PyQt5.QtCore import *
+import PyQt5.QtCore as QtCore
+import PyQt5.QtGui as QtGui
+import PyQt5.QtWidgets as QtWidgets
 import numpy
 import time
 import sys
 import socket
 from PIL import Image
 import io
+import tifffile
 
 from mjpeg_stream_client import get_array_from_mjpeg_stream
 
 
-class RemoteImageGrabber(QThread):
-
-    refresh_3d_sig = pyqtSignal(object, object)
-    refresh_preview = pyqtSignal(object)
+class RemoteImageGrabber(QtCore.QThread):
+    refresh_3d_sig = QtCore.pyqtSignal(object, object)
+    refresh_preview = QtCore.pyqtSignal(object)
 
     def __init__(self, single_image_loc, remote_server):
         self.server = xmlrpc.client.ServerProxy('http://'+remote_server+':5117/RPC2')
@@ -33,7 +35,7 @@ class RemoteImageGrabber(QThread):
         self.remote_server = remote_server
         self.stopping = False
         if start:
-            QThread.__init__(self)
+            QtCore.QThread.__init__(self)
         else:
             sys.exit()
 
@@ -65,7 +67,8 @@ class RemoteImageGrabber(QThread):
                     image = get_array_from_mjpeg_stream(stream)
                     if image is not None:
                         print("emit refresh_preview")
-                        self.refresh_preview.emit(image)
+                        # PyQt does not copy objects - without explicit copy, this crashed when multithreading:
+                        self.refresh_preview.emit(numpy.copy(image))
                     if self.stopping:
                         stream.close()
                         self.server.deactivate_stream()
@@ -103,13 +106,51 @@ class RemoteImageGrabber(QThread):
         image = numpy.fromstring(image_string.data, dtype=numpy.uint16)
         return image.reshape(shape)
 
+
+class ImageGrabberUI(QtWidgets.QWidget):
+    """minimal UI to test interoperability of RemoteImageGrabber with Qt"""
+    def __init__(self, server_address, *__args):
+        super().__init__(*__args)
+
+        self.grabber = RemoteImageGrabber(None, server_address)
+
+        self.grabber.refresh_3d_sig.connect(self.display_image)
+        self.grabber.refresh_preview.connect(self.display_image)
+
+        # UI
+        self.layout = QtWidgets.QHBoxLayout()
+        self.setLayout(self.layout)
+        self.label_for_image = QtWidgets.QLabel()
+        self.layout.addWidget(self.label_for_image)
+        self.button_bayer = QtWidgets.QPushButton("Bayer image")
+        self.layout.addWidget(self.button_bayer)
+        self.show()
+
+        self.i = 0
+
+        self.grabber.start()
+        #self.grabber.order_single_bayer_image((512, 512))
+
+    def display_image(self, ndarray):
+        h, w = ndarray.shape
+        image = QtGui.QImage(ndarray.data, w, h, QtGui.QImage.Format_Grayscale8)
+        pixmap = QtGui.QPixmap.fromImage(image)
+        #pixmap = pixmap.scaledToWidth(self.height / 2)
+        self.label_for_image.setPixmap(pixmap)
+
+
+
 if __name__ == '__main__':
-    import pylab
-    server_addres = '10.82.202.30'
+    import sys
+    server_address = '10.82.202.30'
     request_shape = (128, 128)
     highest_in_16_bit = 1000
 
-    Grabber = RemoteImageGrabber(False, server_addres)
+    app = QtWidgets.QApplication(sys.argv)
+    gui = ImageGrabberUI(server_address)
+    sys.exit(app.exec_())
+
+    Grabber = RemoteImageGrabber(False, server_address)
     # Test with random data
     random_image = Grabber.order_random_image(highest_in_16_bit, request_shape)
     print("Random sata:", random_image.shape, "max:", numpy.max(random_image))
@@ -118,5 +159,5 @@ if __name__ == '__main__':
     cam_image_bayer = Grabber.order_single_bayer_image(request_shape)
     print("Camera image:", cam_image_bayer.shape, "max:", numpy.max(cam_image_bayer))
 
-    pylab.imshow(cam_image_bayer, interpolation="None", cmap="gray")
-    pylab.show()
+
+
