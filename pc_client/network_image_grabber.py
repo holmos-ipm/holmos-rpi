@@ -13,6 +13,7 @@ import io
 
 from mjpeg_stream_client import get_array_from_mjpeg_stream
 
+
 class RemoteImageGrabber(QThread):
 
     refresh_3d_sig = pyqtSignal(object, object)
@@ -60,8 +61,10 @@ class RemoteImageGrabber(QThread):
                 byte_array = b''
                 # https://stackoverflow.com/questions/21702477/how-to-parse-mjpeg-http-stream-from-ip-camera
                 while True:
+                    print("attempting to get image from stream")
                     image = get_array_from_mjpeg_stream(stream)
                     if image is not None:
+                        print("emit refresh_preview")
                         self.refresh_preview.emit(image)
                     if self.stopping:
                         stream.close()

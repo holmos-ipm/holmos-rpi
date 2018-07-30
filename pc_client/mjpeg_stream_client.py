@@ -22,21 +22,26 @@ from PIL import Image
 def get_array_from_mjpeg_stream(open_stream):
     byte_array = b''
     image_complete = False
+    start_pos = -1
+    num_bytes = -1
     while not image_complete:
         byte_array += open_stream.read(1024)
         if len(byte_array) < 1000:
             print("mjpeg streamer sent very little data:")
             print(byte_array)
             return None
-        a = byte_array.find(b'\xff\xd8')
-        b = byte_array.find(b'\xff\xd9')
-        image_complete = a != -1 and b != -1
+        start_pos = byte_array.find(b'\xff\xd8')
+        if start_pos != -1:
+            num_bytes = byte_array[start_pos:].find(b'\xff\xd9')  # stop - search after a only
+        image_complete = start_pos != -1 and num_bytes != -1
 
-    jpg = byte_array[a:b + 2]
+    print("found jpg in stream at", start_pos, "length", num_bytes)
+    jpg = byte_array[start_pos: start_pos + num_bytes + 2]
     byte_stream = io.BytesIO(jpg)
     im = numpy.array(Image.open(byte_stream))[:, :, 0]
 
     return im
+
 
 if __name__ == '__main__':
     remote_server = "10.82.202.30"
