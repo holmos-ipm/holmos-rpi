@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+import threading
 import urllib.request
 import xmlrpc.client
 import PyQt5.QtCore as QtCore
@@ -66,7 +66,7 @@ class RemoteImageGrabber(QtCore.QThread):
                     print("attempting to get image from stream")
                     image = get_array_from_mjpeg_stream(stream)
                     if image is not None:
-                        print("emit refresh_preview")
+                        print("emit refresh_preview in {}".format(threading.current_thread()))
                         # PyQt does not copy objects - without explicit copy, this crashed when multithreading:
                         self.refresh_preview.emit(numpy.copy(image))
                     if self.stopping:
@@ -137,6 +137,7 @@ class ImageGrabberUI(QtWidgets.QWidget):
         image = QtGui.QImage(ndarray.data, w, h, QtGui.QImage.Format_Grayscale8)
         pixmap = QtGui.QPixmap.fromImage(image)
         #pixmap = pixmap.scaledToWidth(self.height / 2)
+        print("displaying image in {}".format(threading.current_thread()))
         self.label_for_image.setPixmap(pixmap)
 
 
