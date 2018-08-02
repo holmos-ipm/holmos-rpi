@@ -18,8 +18,8 @@ from mjpeg_stream_client import get_array_from_mjpeg_stream
 
 
 class RemoteImageGrabber(QtCore.QThread):
-    refresh_3d_sig = QtCore.pyqtSignal(object, object)
-    refresh_preview = QtCore.pyqtSignal(object)
+    refresh_3d_sig = QtCore.pyqtSignal('PyQt_PyObject', 'PyQt_PyObject')
+    refresh_preview = QtCore.pyqtSignal('PyQt_PyObject')
 
     def __init__(self, single_image_loc, remote_server):
         self.server = xmlrpc.client.ServerProxy('http://'+remote_server+':5117/RPC2')
@@ -131,6 +131,7 @@ class ImageGrabberUI(QtWidgets.QWidget):
         self.grabber.start()
         #self.grabber.order_single_bayer_image((512, 512))
 
+    @QtCore.pyqtSlot('PyQt_PyObject')
     def display_image(self, ndarray):
         h, w = ndarray.shape
         image = QtGui.QImage(ndarray.data, w, h, QtGui.QImage.Format_Grayscale8)
