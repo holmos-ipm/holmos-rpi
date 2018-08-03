@@ -86,8 +86,10 @@ class RemoteImageGrabber(QtCore.QThread):
                     if self.stopping:
                         break
 
-    def order_single_bayer_image(self, shape):
+    def order_single_bayer_image(self, shape=None):
         """Get 16-bit uncompressed image from rpi"""
+        if shape is None:
+            shape = (1024, 1024)
         print("getting bayer image...")
         t0 = time.time()
         image_string = self.server.take_single_bayer(*shape).data
