@@ -4,8 +4,10 @@ Created on 02.08.2018
 """
 
 import PyQt5.QtGui as QtGui
-import PyQt5.QtGui as QtGui
+import PyQt5.QtCore as QtCore
 import PyQt5.QtWidgets as QtWidgets
+
+from pc_client.holo_globals import ProcessingStep
 
 
 class HolmosClientUI(QtWidgets.QMainWindow):
@@ -14,7 +16,40 @@ class HolmosClientUI(QtWidgets.QMainWindow):
         super().__init__()
 
         self.label_display = QtWidgets.QLabel()  # main Display
+        dummy_pixmap = QtGui.QPixmap(512, 512)
+        self.label_display.setPixmap(dummy_pixmap)
         self.setCentralWidget(self.label_display)
+
+        # Control Widgets
+        self.modes = ModeSelector()
+        self._mode_widget = QtWidgets.QDockWidget("Modes")
+        self._mode_widget.setWidget(self.modes)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self._mode_widget)
+
+
+class ModeSelector(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+
+        self.setWindowTitle("Modes")
+
+        self._main_layout = QtWidgets.QVBoxLayout(self)
+        self.setLayout(self._main_layout)
+
+        self.btn_raw = QtWidgets.QRadioButton("raw")
+        self.btn_fft = QtWidgets.QRadioButton("FFT")
+        self.btn_holo = QtWidgets.QRadioButton("Hologram")
+        self.btn_raw.setChecked(True)
+        for btn in (self.btn_raw, self.btn_fft, self.btn_holo):
+            self._main_layout.addWidget(btn)
+
+    def processing_step(self):
+        if self.btn_raw.isChecked():
+            return ProcessingStep.STEP_CAM_IMAGE
+        if self.btn_fft.isChecked():
+            return ProcessingStep.STEP_FFT
+        if self.btn_holo.isChecked():
+            return ProcessingStep.STEP_VIS_PHASES_RAW
 
 
 if __name__ == '__main__':
@@ -32,3 +67,4 @@ if __name__ == '__main__':
     win.show()
 
     sys.exit(app.exec_())
+
