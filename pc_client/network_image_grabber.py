@@ -17,11 +17,12 @@ import tifffile
 from mjpeg_stream_client import get_array_from_mjpeg_stream
 
 
-class RemoteImageGrabber(QtCore.QThread):
+class RemoteImageGrabber(QtCore.QObject):
     refresh_3d_sig = QtCore.pyqtSignal('PyQt_PyObject', 'PyQt_PyObject')
     refresh_preview = QtCore.pyqtSignal('PyQt_PyObject')
 
     def __init__(self, single_image_loc, remote_server):
+        super().__init__()
         self.server = xmlrpc.client.ServerProxy('http://'+remote_server+':5117/RPC2')
         start = False
         try:
@@ -34,21 +35,19 @@ class RemoteImageGrabber(QtCore.QThread):
         self.single_image = single_image_loc
         self.remote_server = remote_server
         self.stopping = False
-        if start:
-            QtCore.QThread.__init__(self)
-        else:
-            sys.exit()
 
     # This method is called after the thread has been started
     def run(self):
         if self.single_image:
             print("new RemoteImageGrabber starting in single_image mode...")
         else:
-            self.fetch_images()
+            #self.fetch_images()
+            pass
 
     def stop(self):
         self.stopping = True
 
+    @QtCore.pyqtSlot()
     def fetch_images(self):
         """ get images from the mjpeg_streamer"""
         mjpeg_available = self.server.activate_stream(True)
@@ -63,10 +62,10 @@ class RemoteImageGrabber(QtCore.QThread):
                 byte_array = b''
                 # https://stackoverflow.com/questions/21702477/how-to-parse-mjpeg-http-stream-from-ip-camera
                 while True:
-                    print("attempting to get image from stream")
+                    print("attempting to get image from stream in {}".format(threading.current_thread()))
                     image = get_array_from_mjpeg_stream(stream)  # Todo #3
                     if image is not None:
-                        print("emit refresh_preview in {}, image size {}".format(threading.current_thread(), image.shape))
+                        print("emit refresh_preview image size {}".format(image.shape))
                         # PyQt does not copy objects - without explicit copy, this crashed when multithreading:
                         self.refresh_preview.emit(numpy.copy(image))
                     if self.stopping:
@@ -111,10 +110,15 @@ class RemoteImageGrabber(QtCore.QThread):
 
 class ImageGrabberUI(QtWidgets.QWidget):
     """minimal UI to test interoperability of RemoteImageGrabber with Qt"""
+    sig_start_stream = QtCore.pyqtSignal()
+
     def __init__(self, server_address, *__args):
         super().__init__(*__args)
 
         self.grabber = RemoteImageGrabber(None, server_address)
+        self._grabber_thread = QtCore.QThread()
+        self.grabber.moveToThread(self._grabber_thread)
+        self._grabber_thread.start()
 
         self.grabber.refresh_3d_sig.connect(self.display_image)
         self.grabber.refresh_preview.connect(self.display_image)
@@ -130,7 +134,15 @@ class ImageGrabberUI(QtWidgets.QWidget):
 
         self.i = 0
 
-        self.grabber.start()
+        self.sig_start_stream.connect(self.grabber.fetch_images, QtCore.Qt.QueuedConnection)
+        #self.sig_start_stream.emit()  # Does not work; slot is started in main thread.
+
+        timer = QtCore.QTimer(self)
+        timer.setInterval(500)
+        timer.setSingleShot(True)
+        timer.timeout.connect(self.grabber.fetch_images)
+        timer.start()
+
         #self.grabber.order_single_bayer_image((512, 512))
 
     @QtCore.pyqtSlot('PyQt_PyObject')
@@ -138,7 +150,6 @@ class ImageGrabberUI(QtWidgets.QWidget):
         h, w = ndarray.shape
         image = QtGui.QImage(ndarray.data, w, h, QtGui.QImage.Format_Grayscale8)
         pixmap = QtGui.QPixmap.fromImage(image)
-        #pixmap = pixmap.scaledToWidth(self.height / 2)
         print("displaying image in {}".format(threading.current_thread()))
         self.label_for_image.setPixmap(pixmap)
 
