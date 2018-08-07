@@ -10,6 +10,7 @@ Created on 03.08.2018
 import numpy
 from pc_client.holo_globals import ProcessingStep
 
+
 class ImgToHolo:
     """
     This class contains a camera image which can be evaluated to a Hologram.
@@ -21,7 +22,7 @@ class ImgToHolo:
 
         self.cam_image = numpy.zeros((10,10))
 
-        self.fft_rect_center_yx = [512, 920]  # TODO Hardcoded #2
+        self.fft_rect_center_yx = [527, 955]  # TODO Hardcoded #2
         self.fft_rect_radius = 35
 
     def set_image(self, ndarray):
@@ -39,12 +40,14 @@ class ImgToHolo:
             r = self.fft_rect_radius
             fft_for_display = numpy.log(numpy.abs(fft))
             fft_for_display[y-r:y+r, x-r:x+r] *= 2
-            return fft_for_display.copy()
+            return fft_for_display
 
-        fft_shifted = self.shift_fft(fft)
+        fft_centered = self.shift_fft(fft)
+
+        holo = numpy.fft.ifft2(numpy.fft.ifftshift(fft_centered))
 
         if processing_step == ProcessingStep.STEP_VIS_PHASES_RAW:
-            return numpy.log(numpy.abs(fft_shifted))
+            return numpy.angle(holo)
 
     def crop_fft(self, fft):
         y, x = self.fft_rect_center_yx

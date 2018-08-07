@@ -43,6 +43,9 @@ class ModeSelector(QtWidgets.QWidget):
         for btn in (self.btn_raw, self.btn_fft, self.btn_holo):
             self._main_layout.addWidget(btn)
 
+        vertical_spacer = QtWidgets.QSpacerItem(1,1,QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self._main_layout.addItem(vertical_spacer)
+
     def processing_step(self):
         if self.btn_raw.isChecked():
             return ProcessingStep.STEP_CAM_IMAGE

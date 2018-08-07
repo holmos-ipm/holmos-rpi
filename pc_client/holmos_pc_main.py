@@ -11,11 +11,14 @@ import PyQt5.QtGui as QtGui
 import PyQt5.QtWidgets as QtWidgets
 
 from pc_client.holmos_pc_ui import HolmosClientUI, ModeSelector
-from pc_client.img_to_holo import ImgToHolo
+from pc_client.holmos_pc_worker import HolmosWorker
 from pc_client.network_image_grabber import RemoteImageGrabber
 
 
 class HolmosMainWindoow(HolmosClientUI):
+    sig_get_bayer = QtCore.pyqtSignal()
+    sig_process_images = QtCore.pyqtSignal('PyQt_PyObject')
+
     def __init__(self):
         super().__init__()
 
@@ -26,27 +29,49 @@ class HolmosMainWindoow(HolmosClientUI):
         self._image_grabber.refresh_preview.connect(self.display_image)
         self._image_grabber.refresh_3d_sig.connect(self.display_image)
 
-        self._worker = ImgToHolo(633e-9, 2e-6)
+        # Worker and worker thread
+        self._worker = HolmosWorker()
+        self._worker_thread = QtCore.QThread()
+        self._worker.moveToThread(self._worker_thread)
+        self._worker_thread.start()
+        self.sig_process_images.connect(self._worker.process_image)
+        self._worker.sig_have_processed.connect(self.display_image)
 
-        self._image_grabber.start()
+        #self._image_grabber.start()
+        #self.sig_get_bayer.connect(self._image_grabber.order_single_bayer_image)
+        #self.sig_get_bayer.emit()
+
+        self._worker.set_image(scipy.misc.imread("dump.tiff"))
+
+        timer = QtCore.QTimer(self)
+        timer.setInterval(500)
+        timer.timeout.connect(self.request_processed_image)
+        timer.start()
+
 
     def __del__(self):
         print("stopping")
 
+    def receive_from_cam(self, ndarray):
+        scipy.misc.imsave("dump.tiff", ndarray)
+        self._worker.set_image(ndarray)
+
+    def request_processed_image(self):
+        processing_step = self.modes.processing_step()
+        print("requesting image processing")
+        self.sig_process_images.emit(processing_step)
+
     @QtCore.pyqtSlot('PyQt_PyObject')
     def display_image(self, ndarray):
-        scipy.misc.imsave("dump.tiff", ndarray)
-
-        # TODO: move to other thread
-        self._worker.set_image(ndarray)
-        processing_step = self.modes.processing_step()
-        ndarray = self._worker.process_image(processing_step)
-        scipy.misc.imsave("dump_processed.tiff", ndarray)
-        #
         if ndarray is not None:
+            scipy.misc.imsave("dump_processed.tiff", ndarray)
             if ndarray.dtype != numpy.uint8: # scale to 0..255 for QImage conversion
                 ndarray -= numpy.min(ndarray)
-                ndarray *= 2**8 / numpy.max(ndarray)
+                max = numpy.max(ndarray)
+                if max > 2**8:  # Todo: can this be done more elegantly (and still handle integers well)?
+                    ndarray //= (max // 2**8)
+                else:
+                    ndarray *= (2**8 // max)
                 ndarray = ndarray.astype(numpy.uint8)
 
             h, w = ndarray.shape

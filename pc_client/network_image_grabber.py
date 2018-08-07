@@ -64,9 +64,9 @@ class RemoteImageGrabber(QtCore.QThread):
                 # https://stackoverflow.com/questions/21702477/how-to-parse-mjpeg-http-stream-from-ip-camera
                 while True:
                     print("attempting to get image from stream")
-                    image = get_array_from_mjpeg_stream(stream)
+                    image = get_array_from_mjpeg_stream(stream)  # Todo #3
                     if image is not None:
-                        print("emit refresh_preview in {}".format(threading.current_thread()))
+                        print("emit refresh_preview in {}, image size {}".format(threading.current_thread(), image.shape))
                         # PyQt does not copy objects - without explicit copy, this crashed when multithreading:
                         self.refresh_preview.emit(numpy.copy(image))
                     if self.stopping:
@@ -90,7 +90,7 @@ class RemoteImageGrabber(QtCore.QThread):
         """Get 16-bit uncompressed image from rpi"""
         if shape is None:
             shape = (1024, 1024)
-        print("getting bayer image...")
+        print("getting bayer image in {}".format(threading.current_thread()))
         t0 = time.time()
         image_string = self.server.take_single_bayer(*shape).data
         t1 = time.time()
