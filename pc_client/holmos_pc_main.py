@@ -48,7 +48,6 @@ class HolmosMainWindoow(HolmosClientUI):
         timer.timeout.connect(self.request_processed_image)
         timer.start()
 
-
     def __del__(self):
         print("stopping")
 
@@ -76,7 +75,8 @@ class HolmosMainWindoow(HolmosClientUI):
 
             h, w = ndarray.shape
             image = QtGui.QImage(ndarray.data, w, h, QtGui.QImage.Format_Grayscale8)
-            pixmap = QtGui.QPixmap.fromImage(image)
+            out_size = min(self.label_display.size().height(), self.label_display.size().width())  # todo: non-square
+            pixmap = QtGui.QPixmap.fromImage(image.scaled(out_size, out_size))
             self.label_display.setPixmap(pixmap)
 
 

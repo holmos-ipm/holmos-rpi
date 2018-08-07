@@ -16,6 +16,7 @@ class HolmosClientUI(QtWidgets.QMainWindow):
         super().__init__()
 
         self.label_display = QtWidgets.QLabel()  # main Display
+        self.label_display.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
         dummy_pixmap = QtGui.QPixmap(512, 512)
         self.label_display.setPixmap(dummy_pixmap)
         self.setCentralWidget(self.label_display)
