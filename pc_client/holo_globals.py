@@ -15,3 +15,8 @@ class ProcessingStep(enum.Enum):
     #STEP_SYN_PHASES_RAW = 20
     #STEP_SYN_PHASES_FILT = 21
     #STEP_SYN_PHASES_COMBINED = 30
+
+
+class RpiCamMode(enum.Enum):
+    MJPEG_STREAM = enum.auto()
+    BAYER_RAW = enum.auto()

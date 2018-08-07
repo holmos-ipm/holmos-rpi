@@ -12,7 +12,7 @@ import PyQt5.QtWidgets as QtWidgets
 
 from pc_client.img_to_holo import ImgToHolo
 
-class HolmosWorker(QtCore.QThread):
+class HolmosWorker(QtCore.QObject):
     """Qt Wrapper around an ImgToholo"""
 
     sig_have_processed = QtCore.pyqtSignal('PyQt_PyObject')

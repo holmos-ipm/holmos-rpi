@@ -26,20 +26,24 @@ class HolmosMainWindoow(HolmosClientUI):
 
         # Imagge Grabber (is its own thread)
         self._image_grabber = RemoteImageGrabber(None, '10.82.202.30')
-        self._image_grabber.refresh_preview.connect(self.display_image)
-        self._image_grabber.refresh_3d_sig.connect(self.display_image)
+        self._image_grabber_thread = QtCore.QThread()
+        self._image_grabber.moveToThread(self._image_grabber_thread)
+        self._image_grabber_thread.start()
+
+        self._image_grabber.refresh_preview.connect(self.receive_from_cam)
+        self._image_grabber.refresh_3d_sig.connect(self.receive_from_cam)
+        self.sig_get_bayer.connect(self._image_grabber.order_single_bayer_image)
 
         # Worker and worker thread
         self._worker = HolmosWorker()
         self._worker_thread = QtCore.QThread()
         self._worker.moveToThread(self._worker_thread)
         self._worker_thread.start()
+
         self.sig_process_images.connect(self._worker.process_image)
         self._worker.sig_have_processed.connect(self.display_image)
 
-        #self._image_grabber.start()
-        #self.sig_get_bayer.connect(self._image_grabber.order_single_bayer_image)
-        #self.sig_get_bayer.emit()
+        self.sig_get_bayer.emit()
 
         self._worker.set_image(scipy.misc.imread("dump.tiff"))
 
@@ -54,6 +58,7 @@ class HolmosMainWindoow(HolmosClientUI):
     def receive_from_cam(self, ndarray):
         scipy.misc.imsave("dump.tiff", ndarray)
         self._worker.set_image(ndarray)
+        self.sig_get_bayer.emit()
 
     def request_processed_image(self):
         processing_step = self.modes.processing_step()
