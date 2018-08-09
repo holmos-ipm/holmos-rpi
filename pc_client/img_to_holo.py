@@ -2,7 +2,7 @@
 """
 The Holography algorithms are here, in the class ImgToHolo.
 
-No threading, no Qt in here.
+No threading, no Qt in here. Indices are Image-like, i.e. y,x (and not Qt-like x,y)
 
 Created on 03.08.2018
 """
@@ -22,11 +22,16 @@ class ImgToHolo:
 
         self.cam_image = numpy.zeros((10,10))
 
-        self.fft_rect_center_yx = [527, 955]  # TODO Hardcoded #2
+        self.fft_carrier_yx_rel = (.5, .8)  # given in relative terms (DC at .5,.5) -> independent of image size.
         self.fft_rect_radius = 35
 
     def set_image(self, ndarray):
         self.cam_image = ndarray
+
+    def set_fft_carrier(self, yx):
+        """sets location of diffraction term in Fourier space, i.e. carrier frequency, i.e center of area to evaluate
+        x,y are 0..1 in the shifted FFT: the DC term is at (.5, .5)"""
+        self.fft_carrier_yx_rel = yx
 
     def process_image(self, processing_step):
         if processing_step == ProcessingStep.STEP_CAM_IMAGE:
@@ -36,7 +41,7 @@ class ImgToHolo:
         fft = numpy.fft.fftshift(numpy.fft.fft2(self.cam_image))
 
         if processing_step == ProcessingStep.STEP_FFT:
-            y, x = self.fft_rect_center_yx
+            y, x = self.fft_rect_center_yx_px()
             r = self.fft_rect_radius
             fft_for_display = numpy.log(numpy.abs(fft))
             fft_for_display[y-r:y+r, x-r:x+r] *= 2
@@ -50,7 +55,7 @@ class ImgToHolo:
             return numpy.angle(holo)
 
     def crop_fft(self, fft):
-        y, x = self.fft_rect_center_yx
+        y, x = self.fft_rect_center_yx_px()
         r = self.fft_rect_radius
         return fft[y-r:y+r, x-r:x+r]
 
@@ -60,6 +65,12 @@ class ImgToHolo:
         fft_shifted = numpy.zeros_like(fft)
         fft_shifted[h//2-r:h//2+r, w//2-r:w//2+r] = self.crop_fft(fft)
         return fft_shifted
+
+    def fft_rect_center_yx_px(self):
+        """integer yx coordinates of fft carrier"""
+        y_rel, x_rel = self.fft_carrier_yx_rel
+        h, w = self.cam_image.shape
+        return int(y_rel*h), int(x_rel*w)
 
 
 if __name__ == '__main__':

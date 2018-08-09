@@ -12,6 +12,7 @@ import PyQt5.QtWidgets as QtWidgets
 
 from pc_client.img_to_holo import ImgToHolo
 
+
 class HolmosWorker(QtCore.QObject):
     """Qt Wrapper around an ImgToholo"""
 
@@ -23,6 +24,9 @@ class HolmosWorker(QtCore.QObject):
 
     def set_image(self, ndarray):
         self._ith.set_image(ndarray)
+
+    def fft_rect_center_yx_px(self, xy):  # takes xy
+        self._ith.set_fft_carrier((xy[1], xy[0]))  # takes yx
 
     def process_image(self, processing_step):
         print("starting image processing in {}".format(threading.current_thread()))

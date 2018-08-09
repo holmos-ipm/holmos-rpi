@@ -13,6 +13,7 @@ import PyQt5.QtWidgets as QtWidgets
 from pc_client.holmos_pc_ui import HolmosClientUI, ModeSelector
 from pc_client.holmos_pc_worker import HolmosWorker
 from pc_client.network_image_grabber import RemoteImageGrabber
+from pc_client.holo_globals import ProcessingStep
 
 
 class HolmosMainWindoow(HolmosClientUI):
@@ -43,6 +44,10 @@ class HolmosMainWindoow(HolmosClientUI):
         self.sig_process_images.connect(self._worker.process_image)
         self._worker.sig_have_processed.connect(self.display_image)
 
+        # UI Connections
+        self.label_display.mousePressEvent = self.image_clicked
+
+        # Startup
         self.sig_get_bayer.emit()
 
         self._worker.set_image(scipy.misc.imread("dump.tiff"))
@@ -80,9 +85,32 @@ class HolmosMainWindoow(HolmosClientUI):
 
             h, w = ndarray.shape
             image = QtGui.QImage(ndarray.data, w, h, QtGui.QImage.Format_Grayscale8)
-            out_size = min(self.label_display.size().height(), self.label_display.size().width())  # todo: non-square
-            pixmap = QtGui.QPixmap.fromImage(image.scaled(out_size, out_size))
+            pixmap = QtGui.QPixmap.fromImage(image.scaled(*self.display_size()))
             self.label_display.setPixmap(pixmap)
+
+    def display_size(self):
+        size = min(self.label_display.size().height(), self.label_display.size().width())  # todo: non-square
+        return (size, size)
+
+    def image_clicked(self, mouse_event):
+        assert isinstance(mouse_event, QtGui.QMouseEvent)
+        xy_ui = mouse_event.x(), mouse_event.y()
+        size_ui = self.display_size()
+        size_rel = (1,1)
+        xy_rel = scale_point_in_rect(xy_ui, size_ui, size_rel)
+        if self.modes.processing_step() == ProcessingStep.STEP_FFT:
+            self._worker.fft_rect_center_yx_px(xy_rel)
+
+
+def scale_point_in_rect(xy_from, wh_from, wh_to):
+    """
+    scale a 2D point from one rectangle to another
+    :param xy_from: point in "from" rectangle
+    :param wh_from: size of "from" rectangle
+    :param wh_to: size of "to" rectangle
+    :return: (x_to, y_to) float(!) coordinates in "to" rectangle
+    """
+    return tuple(coord_from / size_from * size_to for coord_from, size_from, size_to in zip(xy_from, wh_from, wh_to))
 
 
 if __name__ == '__main__':
