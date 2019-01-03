@@ -13,6 +13,7 @@ if plot is on Pi:
 * plot updates on Pi
 * console output arrives in Pycharm.
 """
+import time
 
 import matplotlib
 print(matplotlib.rcsetup.all_backends)
@@ -32,22 +33,29 @@ class InteractivePlot:
         self.ys = [0.]
         self.plot, = self.ax.plot(self.ys)
 
+        self.time_last_draw = time.time()
+
     def press(self, event):
         self.ys.append(numpy.random.randn())
-        self.update_plot()
 
-        print('press', event.key, self.ys)
+        print('press', event.key, len(self.ys))
         sys.stdout.flush()
+
+        self.update_plot()
 
     def update_plot(self):
         self.plot.set_ydata(self.ys)
         self.plot.set_xdata(range(len(self.ys)))
 
-        self.ax.relim()
-        self.ax.autoscale_view()
-
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
+        now = time.time()
+        if now - self.time_last_draw > .2:
+            self.time_last_draw = now
+            self.ax.relim()
+            self.ax.autoscale_view()
+            self.fig.canvas.draw()
+        else:
+            print("not updating after", now - self.time_last_draw)
+        #self.fig.canvas.flush_events()
 
 
 if __name__ == '__main__':
