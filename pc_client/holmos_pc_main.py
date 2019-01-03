@@ -31,8 +31,8 @@ class HolmosMainWindoow(HolmosClientUI):
         self._image_grabber.moveToThread(self._image_grabber_thread)
         self._image_grabber_thread.start()
 
-        self._image_grabber.refresh_preview.connect(self.receive_from_cam)
-        self._image_grabber.refresh_3d_sig.connect(self.receive_from_cam)
+        self._image_grabber.sig_jpg_image.connect(self.receive_from_cam)
+        self._image_grabber.sig_raw_image.connect(self.receive_from_cam)
         self.sig_get_bayer.connect(self._image_grabber.order_single_bayer_image)
 
         # Worker and worker thread

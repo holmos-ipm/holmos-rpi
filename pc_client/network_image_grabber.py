@@ -20,8 +20,8 @@ from pc_client.holo_globals import RpiCamMode
 
 
 class RemoteImageGrabber(QtCore.QObject):
-    refresh_3d_sig = QtCore.pyqtSignal('PyQt_PyObject', 'PyQt_PyObject')
-    refresh_preview = QtCore.pyqtSignal('PyQt_PyObject')
+    sig_raw_image = QtCore.pyqtSignal('PyQt_PyObject')
+    sig_jpg_image = QtCore.pyqtSignal('PyQt_PyObject')
 
     def __init__(self, single_image_loc, remote_server):
         super().__init__()
@@ -69,7 +69,7 @@ class RemoteImageGrabber(QtCore.QObject):
                     if image is not None:
                         print("emit refresh_preview image size {}".format(image.shape))
                         # PyQt does not copy objects - without explicit copy, this crashed when multithreading:
-                        self.refresh_preview.emit(numpy.copy(image))
+                        self.sig_jpg_image.emit(numpy.copy(image))
                     if self.stopping:
                         stream.close()
                         self.server.deactivate_stream()
@@ -82,7 +82,7 @@ class RemoteImageGrabber(QtCore.QObject):
                     w = 1024
                     h = 1024
                     image = numpy.multiply(array[:w * h].reshape((h, w)),2, dtype=numpy.uint8)
-                    self.refresh_preview.emit(image)
+                    self.sig_jpg_image.emit(image)
                     print(time.time()-start)
                     if self.stopping:
                         break
@@ -95,12 +95,12 @@ class RemoteImageGrabber(QtCore.QObject):
         t0 = time.time()
         image_string = self.server.take_single_bayer(*shape).data
         t1 = time.time()
-        print("Bayer image transferred in {:.1} s".format(t1-t0))
+        print("Bayer image transferred in {:.1f} s".format(t1-t0))
 
         image = numpy.fromstring(image_string, numpy.uint16)
         assert(image.size == shape[0]*shape[1])
 
-        self.refresh_3d_sig.emit(image.reshape(shape), True)
+        self.sig_raw_image.emit(image.reshape(shape))
         return image.reshape(shape)
 
     def order_random_image(self, highest, shape):
@@ -122,8 +122,8 @@ class ImageGrabberUI(QtWidgets.QWidget):
         self.grabber.moveToThread(self._grabber_thread)
         self._grabber_thread.start()
 
-        self.grabber.refresh_3d_sig.connect(self.display_image)
-        self.grabber.refresh_preview.connect(self.display_image)
+        self.grabber.sig_raw_image.connect(self.display_image)
+        self.grabber.sig_jpg_image.connect(self.display_image)
 
         # UI
         self.layout = QtWidgets.QHBoxLayout()

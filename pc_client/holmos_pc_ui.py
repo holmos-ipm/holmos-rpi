@@ -37,13 +37,32 @@ class ModeSelector(QtWidgets.QWidget):
         self._main_layout = QtWidgets.QVBoxLayout(self)
         self.setLayout(self._main_layout)
 
+        # camera mode
+        _cam_mode_widget = QtWidgets.QWidget()
+        _cam_mode_layout = QtWidgets.QVBoxLayout(self)
+        _cam_mode_widget.setLayout(_cam_mode_layout)
+        _cam_mode_layout.addWidget(QtWidgets.QLabel("Camera mode:"))
+        self.btn_cam_stream = QtWidgets.QRadioButton("fast MJPEG stream")
+        self.btn_cam_raw = QtWidgets.QRadioButton("hifi raw images")
+        self.btn_cam_stream.setChecked(True)
+        for btn in (self.btn_cam_stream, self.btn_cam_raw):
+            _cam_mode_layout.addWidget(btn)
+
+        # processing mode
+        _proc_mode_widget = QtWidgets.QWidget()
+        _proc_mode_layout = QtWidgets.QVBoxLayout(self)
+        _proc_mode_widget.setLayout(_proc_mode_layout)
+        _proc_mode_layout.addWidget(QtWidgets.QLabel("Processing mode:"))
         self.btn_raw = QtWidgets.QRadioButton("raw")
         self.btn_fft = QtWidgets.QRadioButton("FFT")
         self.btn_holo = QtWidgets.QRadioButton("Hologram")
         self.btn_raw.setChecked(True)
         for btn in (self.btn_raw, self.btn_fft, self.btn_holo):
-            self._main_layout.addWidget(btn)
+            _proc_mode_layout.addWidget(btn)
 
+        # combine everything
+        self._main_layout.addWidget(_cam_mode_widget)
+        self._main_layout.addWidget(_proc_mode_widget)
         vertical_spacer = QtWidgets.QSpacerItem(1,1,QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self._main_layout.addItem(vertical_spacer)
 
