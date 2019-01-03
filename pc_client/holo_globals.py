@@ -18,5 +18,5 @@ class ProcessingStep(enum.Enum):
 
 
 class RpiCamMode(enum.Enum):
-    MJPEG_STREAM = enum.auto()
-    BAYER_RAW = enum.auto()
+    MJPEG_STREAM = 0
+    BAYER_RAW = 1
