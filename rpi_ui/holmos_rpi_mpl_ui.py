@@ -47,6 +47,7 @@ class HolmosPlot:
         self.im_pipe = im_pipe
 
         self._ith = ImgToHolo(633e-9, 2e-6)
+        self._ith.fft_rect_radius = 100
 
         cv2.startWindowThread()
         cv2.namedWindow("Image")
