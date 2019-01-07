@@ -7,6 +7,7 @@ Created on 03.01.2019
 holmos client for direct execution on rpi
 developed for Raspberry Pi 3B
 """
+import configparser
 import os
 import sys
 import threading
@@ -34,6 +35,9 @@ except ImportError:
 
 w_full, h_full = 3280, 2464
 
+KEY_FFT_X = "fft_x"
+KEY_FFT_Y = "fft_y"
+
 
 class HolmosPlot:
     """interactive matplotlib.figure"""
@@ -42,9 +46,12 @@ class HolmosPlot:
     fft_y = int(h*.5)
     num_ims = 0
     processing_step = ProcessingStep.STEP_CAM_IMAGE
+    ini_path = "holmos_settings.ini"
 
     def __init__(self, im_pipe):
         self.im_pipe = im_pipe
+
+        self.load_settings()
 
         self._ith = ImgToHolo(633e-9, 2e-6)
         self._ith.fft_rect_radius = 120
@@ -117,9 +124,25 @@ class HolmosPlot:
         self.set_fft_carrier()
 
     def set_fft_carrier(self):
+        """apply member settings to ITH"""
         self._ith.set_fft_carrier((self.fft_y/self.h, self.fft_x/self.w))
+        self.save_settings()
 
+    def save_settings(self):
+        config = configparser.ConfigParser()
+        config.set('DEFAULT', KEY_FFT_X, str(self.fft_x))
+        config.set('DEFAULT', KEY_FFT_Y, str(self.fft_y))
+        with open(self.ini_path, 'w') as ini_handle:
+            config.write(ini_handle)
 
+    def load_settings(self):
+        if not (os.path.exists(self.ini_path)):
+            print("no ini file found")
+            return
+        config = configparser.ConfigParser()
+        config.read(self.ini_path)
+        self.fft_x = config.getint('DEFAULT', KEY_FFT_X, fallback=int(self.h*.8))
+        self.fft_y = config.getint('DEFAULT', KEY_FFT_Y, fallback=int(self.h*.5))
 
 
 class HolmosMain:
