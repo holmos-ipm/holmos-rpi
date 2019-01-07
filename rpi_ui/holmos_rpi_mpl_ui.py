@@ -14,18 +14,13 @@ import threading
 import time
 import multiprocessing
 import warnings
-from io import BytesIO
 
 import cv2
-from PIL import Image
-
-from pc_client.img_to_holo import ImgToHolo
-
-print("cv2 version", cv2.__version__)
-
 import numpy
 
 from pc_client.holo_globals import ProcessingStep
+from pc_client.img_to_holo import ImgToHolo
+
 
 try:
     import picamera
@@ -34,6 +29,7 @@ except ImportError:
     print("Could not import picamera. Are we running on a Raspberry Pi?")
     exit()
 
+print("cv2 version", cv2.__version__)
 
 w_full, h_full = 3280, 2464
 
@@ -51,7 +47,7 @@ class HolmosPlot:
     ini_path = "holmos_settings.ini"
 
     def __init__(self, im_pipe):
-        self.im_pipe = im_pipe
+        self.im_queue = im_pipe
 
         self.load_settings()
 
@@ -74,8 +70,8 @@ class HolmosPlot:
         self.poll_once()
 
     def poll_once(self):
-        if self.im_pipe.poll(.1):
-            im = self.im_pipe.recv()
+        if not self.im_queue.empty():
+            im = self.im_queue.get()
             print(os.getpid(), "got image:", im.shape)
             sys.stdout.flush()
             self.update_im(im)
@@ -153,38 +149,51 @@ class HolmosPlot:
 
 class HolmosMain:
     def __init__(self):
-        pipe_end_0, pipe_end_1 = multiprocessing.Pipe()
 
-        self.ui = HolmosPlot(pipe_end_0)  # plot lives in this (main) process
+        queue = multiprocessing.Queue()
 
-        self.cam_process = multiprocessing.Process(target=loopcam, args=(pipe_end_1,), daemon=True)  # ...but cam in own proc.
+        self.ui = HolmosPlot(queue)  # plot lives in this (main) process
+        self.cam = LoopCam()
+
+        self.cam_process = multiprocessing.Process(target=self.cam, args=(queue,), daemon=True)  # ...but cam in own proc.
         self.cam_process.start()
-        print(self.cam_process.pid)
 
 
-def loopcam(pipe):
-    camera = picamera.PiCamera()
-    camera.resolution = (w_full, h_full)
-    output_bayer = picamera.array.PiBayerArray(camera)
-    output_fast = YuvBufToNumpy()
+class LoopCam(object):
     capture_bayer = False
-    while True:
-        tic = time.time()
-        print(os.getpid(), "getting image from loopcam")
-        sys.stdout.flush()
-        output_bayer.truncate(0)
 
-        if capture_bayer:
-            camera.capture(output_bayer, 'jpeg', bayer=capture_bayer)
-            im = output_bayer.array[1::2, 1::2, 0]  # red, one out of each 2x2
-            print(os.getpid(), "Acquire Bayer: {:.1f}".format(time.time() - tic))
-        else:
-            camera.capture(output_fast, 'yuv')
-            im = output_fast.data[::2, ::2]
-            print(os.getpid(), "Acquire yuv: {:.1f}".format(time.time() - tic))
+    def __init__(self):
+        print(os.getpid(), "LoopCam Init")
 
-        pipe.send(im)
-        sys.stdout.flush()
+    def __call__(self, queue):
+        camera = picamera.PiCamera()
+        camera.resolution = (w_full, h_full)
+        output_bayer = picamera.array.PiBayerArray(camera)
+        output_fast = YuvBufToNumpy()
+        print(os.getpid(), "LoopCam __call__")
+
+        while True:
+            tic = time.time()
+            print(os.getpid(), "getting image from loopcam")
+            sys.stdout.flush()
+            output_bayer.truncate(0)
+
+            if self.capture_bayer:
+                camera.capture(output_bayer, 'jpeg', bayer=True)
+                im = output_bayer.array[1::2, 1::2, 0]  # red, one out of each 2x2
+                print(os.getpid(), "Acquire Bayer: {:.1f}".format(time.time() - tic))
+            else:
+                camera.capture(output_fast, 'yuv')
+                im = output_fast.data[::2, ::2]
+                print(os.getpid(), "Acquire yuv: {:.1f}".format(time.time() - tic))
+
+            tic = time.time()
+            while not queue.empty():
+                time.sleep(.1)
+            print(os.getpid(), "Waited {:.1f} s for Queue to become ready".format(time.time() - tic))
+            queue.put(im)
+
+            sys.stdout.flush()
 
 
 class YuvBufToNumpy(object):
