@@ -91,8 +91,6 @@ class HolmosPlot:
 
         now = time.time()
         if now - self.time_last_draw > .2:
-            self.time_last_draw = now
-
             self._ith.set_image(self.im)
             im_result = self._ith.process_image(self.processing_step)
             if self.processing_step == ProcessingStep.STEP_FFT:
@@ -106,7 +104,9 @@ class HolmosPlot:
             #cv2.putText(im_to_show, label, (100, 100), cv2.FONT_HERSHEY_PLAIN, 2, 2**16)
             cv2.imshow("Image", im_to_show)
             self.num_ims += 1
-            print(os.getpid(), "drew image.")
+            now = time.time()
+            print(os.getpid(), "drew image. Total Time: {:.1f}s".format(now - self.time_last_draw))
+            self.time_last_draw = now
             sys.stdout.flush()
 
     def mode_change(self, mode):
