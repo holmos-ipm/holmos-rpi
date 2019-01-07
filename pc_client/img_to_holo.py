@@ -63,6 +63,8 @@ class ImgToHolo:
         fft_centered = self.move_diffraction_order_to_center(fft)
 
         holo = numpy.fft.ifft2(numpy.fft.ifftshift(fft_centered))
+        h, w = holo.shape
+        holo /= numpy.average(holo[h//2-5:h//2+5, w//2-5:w//2+5])  # Todo: make optional/settable
 
         if processing_step == ProcessingStep.STEP_VIS_PHASES_RAW:
             self.logger("return phase: {:.1f} s".format(time.time()-tic))
