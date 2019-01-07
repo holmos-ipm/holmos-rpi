@@ -35,7 +35,7 @@ except ImportError:
 
 w_full, h_full = 3280, 2464
 
-KEY_FFT_X = "fft_x"
+KEY_FFT_X = "fft_x"  # TODO: use same as holo-software?
 KEY_FFT_Y = "fft_y"
 
 
@@ -54,8 +54,9 @@ class HolmosPlot:
         self.load_settings()
 
         self._ith = ImgToHolo(633e-9, 2e-6)
-        self._ith.fft_rect_radius = 120
+        self._ith.set_fft_carrier(None, r=120/self.w)
         self._ith.logger = lambda s: print(s)
+        self._ith.halfsize_output = True
 
         cv2.startWindowThread()
         cv2.namedWindow("Image")
@@ -100,7 +101,7 @@ class HolmosPlot:
                 im_result /= 2*numpy.pi
 
             label = "{}".format(self.num_ims)
-            im_to_show = numpy.copy(im_result[::2, ::2])
+            im_to_show = im_result
             #cv2.putText(im_to_show, label, (100, 100), cv2.FONT_HERSHEY_PLAIN, 2, 2**16)
             cv2.imshow("Image", im_to_show)
             self.num_ims += 1
