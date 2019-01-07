@@ -14,8 +14,10 @@ import threading
 import time
 import multiprocessing
 import warnings
+from io import BytesIO
 
 import cv2
+from PIL import Image
 
 from pc_client.img_to_holo import ImgToHolo
 
@@ -86,7 +88,10 @@ class HolmosPlot:
     def update_im(self, new_im):
         if new_im.shape != (self.h, self.w):
             warnings.warn(os.getpid(), "got image of shape {}, expected {}".format(new_im.shape, (self.h, self.w)))
-        self.im = new_im*2**6
+        self.im = new_im
+
+        if new_im.dtype == numpy.uint16:
+            self.im *= 2**6  # rescale to uppermost of 16 bits, otherwise display is very dark.
 
         now = time.time()
         if now - self.time_last_draw > .2:
@@ -159,18 +164,49 @@ class HolmosMain:
 
 def loopcam(pipe):
     camera = picamera.PiCamera()
-    output = picamera.array.PiBayerArray(camera)
+    camera.resolution = (w_full, h_full)
+    output_bayer = picamera.array.PiBayerArray(camera)
+    output_fast = YuvBufToNumpy()
+    capture_bayer = False
     while True:
-        print(os.getpid(), "getting bayer image from loopcam")
+        tic = time.time()
+        print(os.getpid(), "getting image from loopcam")
         sys.stdout.flush()
-        output.truncate(0)
-        camera.capture(output, 'jpeg', bayer=True)
+        output_bayer.truncate(0)
 
-        im = output.array[1::2, 1::2, 0]  # red, one out of each 2x2
+        if capture_bayer:
+            camera.capture(output_bayer, 'jpeg', bayer=capture_bayer)
+            im = output_bayer.array[1::2, 1::2, 0]  # red, one out of each 2x2
+            print(os.getpid(), "Acquire Bayer: {:.1f}".format(time.time() - tic))
+        else:
+            camera.capture(output_fast, 'yuv')
+            im = output_fast.data[::2, ::2]
+            print(os.getpid(), "Acquire yuv: {:.1f}".format(time.time() - tic))
 
         pipe.send(im)
-        print(os.getpid(), "put image.")
         sys.stdout.flush()
+
+
+class YuvBufToNumpy(object):
+    data = None
+    u = None
+    v = None
+
+    def write(self, buf):
+        w_pad = int(numpy.ceil(w_full/32)*32)  # picamera writes in 32x16 blocks
+        h_pad = int(numpy.ceil(h_full/16)*16)
+        # YUV420: [w x h: luminance, Y]--[w/2 x h/2 U]--[w/2 x h/2 V]
+        self.data = numpy.frombuffer(buf, dtype=numpy.uint8,
+                                     count=w_pad*h_pad).reshape((h_pad, w_pad))[:h_full, :w_full]
+        ''' # Do not need u,v - but I'll leave this here in case someone needs color later.
+        self.u = numpy.frombuffer(buf, dtype=numpy.uint8, offset=w_pad*h_pad,
+                                  count=w_pad*h_pad//4).reshape((h_pad//2, w_pad//2))[:h_full//2, :w_full//2]
+        self.v = numpy.frombuffer(buf, dtype=numpy.uint8, offset=w_pad*h_pad*5//4,
+                                  count=w_pad*h_pad//4).reshape((h_pad//2, w_pad//2))[:h_full//2, :w_full//2]
+        '''
+
+    def flush(self):
+        pass
 
 
 if __name__ == '__main__':
