@@ -27,6 +27,8 @@ class ImgToHolo:
         self.fft_carrier_yx_rel = (.5, .8)  # given in relative terms (DC at .5,.5) -> independent of image size.
         self.fft_rect_radius = 35
 
+        self.logger = lambda s: s  # do nothing.
+
     def set_image(self, ndarray):
         self.cam_image = ndarray
 
@@ -38,26 +40,22 @@ class ImgToHolo:
     def process_image(self, processing_step):
         tic = time.time()
         if processing_step == ProcessingStep.STEP_CAM_IMAGE:
-            print(os.getpid(), "return cam image: {:.1f} s".format(time.time()-tic))
+            self.logger("return cam image: {:.1f} s".format(time.time()-tic))
             return self.cam_image
 
         # (Forward) FFT:
         fft = numpy.fft.fftshift(numpy.fft.fft2(self.cam_image))
 
         if processing_step == ProcessingStep.STEP_FFT:
-            y, x = self.fft_rect_center_yx_px()
-            r = self.fft_rect_radius
-            fft_for_display = numpy.log(numpy.abs(fft))
-            fft_for_display[y-r:y+r, x-r:x+r] *= 2
-            print(os.getpid(), "return fft: {:.1f} s".format(time.time()-tic))
-            return fft_for_display
+            self.logger("return fft: {:.1f} s".format(time.time()-tic))
+            return self.highlight_fft_carrier(fft)
 
         fft_centered = self.move_diffraction_order_to_center(fft)
 
         holo = numpy.fft.ifft2(numpy.fft.ifftshift(fft_centered))
 
         if processing_step == ProcessingStep.STEP_VIS_PHASES_RAW:
-            print(os.getpid(), "return phase: {:.1f} s".format(time.time()-tic))
+            self.logger("return phase: {:.1f} s".format(time.time()-tic))
             return numpy.angle(holo)
 
     def crop_fft(self, fft):
@@ -77,6 +75,14 @@ class ImgToHolo:
         y_rel, x_rel = self.fft_carrier_yx_rel
         h, w = self.cam_image.shape
         return int(y_rel*h), int(x_rel*w)
+
+    def highlight_fft_carrier(self, fft):
+        """log of fft; highlight diffcation order."""
+        y, x = self.fft_rect_center_yx_px()
+        r = self.fft_rect_radius
+        fft_for_display = numpy.log(numpy.abs(fft))
+        fft_for_display[y-r:y+r, x-r:x+r] *= 2
+        return fft_for_display
 
 
 if __name__ == '__main__':
