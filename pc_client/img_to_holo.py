@@ -6,6 +6,8 @@ No threading, no Qt in here. Indices are Image-like, i.e. y,x (and not Qt-like x
 
 Created on 03.08.2018
 """
+import os
+import time
 
 import numpy
 from pc_client.holo_globals import ProcessingStep
@@ -34,7 +36,9 @@ class ImgToHolo:
         self.fft_carrier_yx_rel = yx
 
     def process_image(self, processing_step):
+        tic = time.time()
         if processing_step == ProcessingStep.STEP_CAM_IMAGE:
+            print(os.getpid(), "return cam image: {:.1f} s".format(time.time()-tic))
             return self.cam_image
 
         # (Forward) FFT:
@@ -45,13 +49,15 @@ class ImgToHolo:
             r = self.fft_rect_radius
             fft_for_display = numpy.log(numpy.abs(fft))
             fft_for_display[y-r:y+r, x-r:x+r] *= 2
+            print(os.getpid(), "return fft: {:.1f} s".format(time.time()-tic))
             return fft_for_display
 
-        fft_centered = self.shift_fft(fft)
+        fft_centered = self.move_diffraction_order_to_center(fft)
 
         holo = numpy.fft.ifft2(numpy.fft.ifftshift(fft_centered))
 
         if processing_step == ProcessingStep.STEP_VIS_PHASES_RAW:
+            print(os.getpid(), "return phase: {:.1f} s".format(time.time()-tic))
             return numpy.angle(holo)
 
     def crop_fft(self, fft):
@@ -59,7 +65,7 @@ class ImgToHolo:
         r = self.fft_rect_radius
         return fft[y-r:y+r, x-r:x+r]
 
-    def shift_fft(self, fft):
+    def move_diffraction_order_to_center(self, fft):
         h, w = fft.shape
         r = self.fft_rect_radius
         fft_shifted = numpy.zeros_like(fft)
