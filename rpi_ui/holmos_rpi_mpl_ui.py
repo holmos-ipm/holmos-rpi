@@ -7,6 +7,7 @@ Created on 03.01.2019
 holmos client for direct execution on rpi
 developed for Raspberry Pi 3B
 """
+
 import configparser
 import os
 import sys
@@ -15,7 +16,7 @@ import time
 import multiprocessing
 import warnings
 
-import cv2
+import PIL.ImageTk
 import numpy
 import tkinter as tk
 
@@ -29,8 +30,6 @@ try:
 except ImportError:
     print("Could not import picamera. Are we running on a Raspberry Pi?")
     exit()
-
-print("cv2 version", cv2.__version__)
 
 w_full, h_full = 3280, 2464
 
@@ -61,23 +60,37 @@ class HolmosPlot:
     num_ims = 0
     processing_step = ProcessingStep.STEP_CAM_IMAGE
     ini_path = "holmos_settings.ini"
+    tk_photo = None  # Need to keep reference, otherwise image is deleted and disappears from screen
 
     def __init__(self, im_pipe):
         self.im_queue = im_pipe
 
         self.load_settings()
 
+        #self._cam = cam
+        self.tk_root = tk.Tk()
+
+        Frame = tk.Frame(self.tk_root)
+        slider_mode = tk.Scale(Frame, from_=0, to=2, orient=tk.HORIZONTAL, command=self.mode_change, label="Mode")
+        fft_slider_x = tk.Scale(Frame, from_=0, to=self.w, orient=tk.HORIZONTAL, command=self.slide_fft_x, label="fft_x")
+        fft_slider_x.set(self.fft_x)
+        fft_slider_y = tk.Scale(Frame, from_=0, to=self.h, orient=tk.HORIZONTAL, command=self.slide_fft_y, label="fft_y")
+        fft_slider_y.set(self.fft_y)
+        slider_mode.pack()
+        fft_slider_x.pack()
+        fft_slider_y.pack()
+
+        self.canvas = tk.Canvas(Frame, height=self.h/2, width=self.w/2)
+        self.canvas.place(x=0, y=0)
+        self.canvas.pack()
+
+        self.tk_image = self.canvas.create_image(0, 0, anchor=tk.NW)
+        Frame.pack()
+
         self._ith = ImgToHolo(633e-9, 2e-6)
         self._ith.set_fft_carrier(None, r=120/self.w)
         #self._ith.logger = lambda s: print(s)
         self._ith.halfsize_output = True
-
-        cv2.startWindowThread()
-        cv2.namedWindow("Image")
-        cv2.createTrackbar('Mode', "Image", 0, 2, self.mode_change)
-        cv2.createTrackbar('FFT X', "Image", self.fft_x, self.w, self.slide_fft_x)
-        cv2.createTrackbar('FFT Y', "Image", self.fft_y, self.h, self.slide_fft_y)
-        self.set_fft_carrier()
 
         self.im = numpy.zeros((self.h, self.w))
 
@@ -113,15 +126,21 @@ class HolmosPlot:
             im_result = self._ith.process_image(request.processing_step)
             if request.processing_step == ProcessingStep.STEP_FFT:
                 im_result /= numpy.max(im_result)
+                im_result *= 255
             if request.processing_step == ProcessingStep.STEP_VIS_PHASES_RAW:
                 im_result += numpy.pi
                 im_result /= 2*numpy.pi
+                im_result *=255
             request.time_calc_finish = time.time()
 
-            label = "{}".format(self.num_ims)
-            im_to_show = im_result
-            #cv2.putText(im_to_show, label, (100, 100), cv2.FONT_HERSHEY_PLAIN, 2, 2**16)
-            cv2.imshow("Image", im_to_show)
+            if im_result.dtype == numpy.uint16:
+                im_result = im_result/2**8
+
+            im_result = im_result.astype(numpy.uint8)
+            pil_im = PIL.Image.fromarray(im_result)
+            self.photo = PIL.ImageTk.PhotoImage(image=pil_im)
+            self.canvas.itemconfig(self.tk_image, image=self.photo)
+
             self.num_ims += 1
             now = time.time()
             print(os.getpid(), "drew image. Total time since last image: {:.1f}s".format(now - self.time_last_draw))
@@ -133,16 +152,16 @@ class HolmosPlot:
         mode_dict = {0: ProcessingStep.STEP_CAM_IMAGE,
                      1: ProcessingStep.STEP_FFT,
                      2: ProcessingStep.STEP_VIS_PHASES_RAW}
-        self.processing_step = mode_dict[mode]
+        self.processing_step = mode_dict[int(mode)]
         print("mode", mode)
         sys.stdout.flush()
 
     def slide_fft_x(self, x):
-        self.fft_x = x
+        self.fft_x = int(x)
         self.set_fft_carrier()
 
     def slide_fft_y(self, y):
-        self.fft_y = y
+        self.fft_y = int(y)
         self.set_fft_carrier()
 
     def set_fft_carrier(self):
@@ -160,6 +179,8 @@ class HolmosPlot:
     def load_settings(self):
         if not (os.path.exists(self.ini_path)):
             print("no ini file found")
+            self.fft_x = self.w//2
+            self.fft_y = self.h//2
             return
         config = configparser.ConfigParser()
         config.read(self.ini_path)
@@ -178,7 +199,7 @@ class HolmosMain:
         self.cam_process = multiprocessing.Process(target=self.cam, args=(queue,), daemon=True)  # ...but cam in own proc.
         self.cam_process.start()
 
-        self.ui = HolmosControls(self.plot, self.cam)
+        tk.mainloop()
 
 
 class LoopCam(object):
@@ -238,31 +259,6 @@ class YuvBufToNumpy(object):
 
     def flush(self):
         pass
-
-
-class HolmosControls:
-    _plot = None
-    _cam = None
-
-    def __init__(self, plot: HolmosPlot, cam: LoopCam):
-        self._cam = cam
-        self._plot = plot
-
-        self.tk_root = tk.Tk()
-
-        fft_sliders = tk.Frame(self.tk_root)
-        fft_slider_x = tk.Scale(fft_sliders, from_=0, to=plot.w, orient=tk.HORIZONTAL, command=self.scale)
-        fft_slider_x.pack()
-
-        fft_sliders.pack()
-
-        tk.mainloop()
-
-    def scale(self, n):
-        print("SCALE COMMAND", type(n))
-        self._plot.slide_fft_x(int(n))
-
-
 
 
 if __name__ == '__main__':

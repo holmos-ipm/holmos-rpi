@@ -78,8 +78,8 @@ class ImgToHolo:
         h, w = fft.shape
         _, _, rx, ry = self.fft_rect_center_yxrr_px(halfsize=False)  # here, have full size always, even for half-sized output.
         if self.halfsize_output:
-            h /= 2
-            w /= 2
+            h //= 2
+            w //= 2
         fft_shifted = numpy.zeros((h, w), dtype=fft.dtype)
         fft_shifted[h//2-ry:h//2+ry, w//2-rx:w//2+rx] = self.crop_fft(fft, halfsize=False)
         return fft_shifted
