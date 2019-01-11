@@ -17,6 +17,7 @@ import warnings
 
 import cv2
 import numpy
+import tkinter as tk
 
 from pc_client.holo_globals import ProcessingStep
 from pc_client.img_to_holo import ImgToHolo
@@ -37,6 +38,21 @@ KEY_FFT_X = "fft_x"  # TODO: use same as holo-software?
 KEY_FFT_Y = "fft_y"
 
 
+class HolmosRequest:
+    time_cam_start = None
+    time_cam_finish = None
+    time_calc_finish = None
+    cam_bayer = None
+    processing_step = None
+    data = None
+
+    def __str__(self):
+        acq_s = self.time_cam_finish - self.time_cam_start
+        calc_s = self.time_calc_finish - self.time_cam_finish
+        desc = "<HolmosReuquest - Acq {:.1f}s, Calc {:.1f}s, Total {:.1f}s>".format(acq_s, calc_s, acq_s+calc_s)
+        return desc
+
+
 class HolmosPlot:
     """interactive matplotlib.figure"""
     w, h = w_full//2, h_full//2  # /2 because resulting images are R-channel only.
@@ -53,7 +69,7 @@ class HolmosPlot:
 
         self._ith = ImgToHolo(633e-9, 2e-6)
         self._ith.set_fft_carrier(None, r=120/self.w)
-        self._ith.logger = lambda s: print(s)
+        #self._ith.logger = lambda s: print(s)
         self._ith.halfsize_output = True
 
         cv2.startWindowThread()
@@ -71,33 +87,36 @@ class HolmosPlot:
 
     def poll_once(self):
         if not self.im_queue.empty():
-            im = self.im_queue.get()
-            print(os.getpid(), "got image:", im.shape)
+            request = self.im_queue.get()
+            print(os.getpid(), "got image:", request.data.shape)
             sys.stdout.flush()
-            self.update_im(im)
+            request.processing_step = self.processing_step  # once cam image is returned, set the processing step
+            self.update_im(request)
         else:
             #print(os.getpid(), "poll empty")
             time.sleep(.01)
         t = threading.Timer(.1, self.poll_once)
         t.start()
 
-    def update_im(self, new_im):
-        if new_im.shape != (self.h, self.w):
-            warnings.warn(os.getpid(), "got image of shape {}, expected {}".format(new_im.shape, (self.h, self.w)))
-        self.im = new_im
+    def update_im(self, request):
+        assert isinstance(request, HolmosRequest)
+        if request.data.shape != (self.h, self.w):
+            warnings.warn(os.getpid(), "got image of shape {}, expected {}".format(request.data.shape, (self.h, self.w)))
+        self.im = request.data
 
-        if new_im.dtype == numpy.uint16:
+        if request.data.dtype == numpy.uint16:
             self.im *= 2**6  # rescale to uppermost of 16 bits, otherwise display is very dark.
 
         now = time.time()
         if now - self.time_last_draw > .2:
-            self._ith.set_image(self.im)
-            im_result = self._ith.process_image(self.processing_step)
-            if self.processing_step == ProcessingStep.STEP_FFT:
+            self._ith.set_image(request.data)
+            im_result = self._ith.process_image(request.processing_step)
+            if request.processing_step == ProcessingStep.STEP_FFT:
                 im_result /= numpy.max(im_result)
-            if self.processing_step == ProcessingStep.STEP_VIS_PHASES_RAW:
+            if request.processing_step == ProcessingStep.STEP_VIS_PHASES_RAW:
                 im_result += numpy.pi
                 im_result /= 2*numpy.pi
+            request.time_calc_finish = time.time()
 
             label = "{}".format(self.num_ims)
             im_to_show = im_result
@@ -105,7 +124,8 @@ class HolmosPlot:
             cv2.imshow("Image", im_to_show)
             self.num_ims += 1
             now = time.time()
-            print(os.getpid(), "drew image. Total Time: {:.1f}s".format(now - self.time_last_draw))
+            print(os.getpid(), "drew image. Total time since last image: {:.1f}s".format(now - self.time_last_draw))
+            print(request)
             self.time_last_draw = now
             sys.stdout.flush()
 
@@ -152,11 +172,13 @@ class HolmosMain:
 
         queue = multiprocessing.Queue()
 
-        self.ui = HolmosPlot(queue)  # plot lives in this (main) process
+        self.plot = HolmosPlot(queue)  # plot lives in this (main) process
         self.cam = LoopCam()
 
         self.cam_process = multiprocessing.Process(target=self.cam, args=(queue,), daemon=True)  # ...but cam in own proc.
         self.cam_process.start()
+
+        self.ui = HolmosControls(self.plot, self.cam)
 
 
 class LoopCam(object):
@@ -173,25 +195,25 @@ class LoopCam(object):
         print(os.getpid(), "LoopCam __call__")
 
         while True:
-            tic = time.time()
-            print(os.getpid(), "getting image from loopcam")
-            sys.stdout.flush()
+            request = HolmosRequest()
+            request.time_cam_start = time.time()
+
             output_bayer.truncate(0)
 
+            request.cam_bayer = self.capture_bayer
             if self.capture_bayer:
                 camera.capture(output_bayer, 'jpeg', bayer=True)
-                im = output_bayer.array[1::2, 1::2, 0]  # red, one out of each 2x2
-                print(os.getpid(), "Acquire Bayer: {:.1f}".format(time.time() - tic))
+                request.data = output_bayer.array[1::2, 1::2, 0]  # red, one out of each 2x2
             else:
                 camera.capture(output_fast, 'yuv')
-                im = output_fast.data[::2, ::2]
-                print(os.getpid(), "Acquire yuv: {:.1f}".format(time.time() - tic))
+                request.data = output_fast.data[::2, ::2]
+            request.time_cam_finish = time.time()
 
             tic = time.time()
             while not queue.empty():
                 time.sleep(.1)
             print(os.getpid(), "Waited {:.1f} s for Queue to become ready".format(time.time() - tic))
-            queue.put(im)
+            queue.put(request)
 
             sys.stdout.flush()
 
@@ -216,6 +238,31 @@ class YuvBufToNumpy(object):
 
     def flush(self):
         pass
+
+
+class HolmosControls:
+    _plot = None
+    _cam = None
+
+    def __init__(self, plot: HolmosPlot, cam: LoopCam):
+        self._cam = cam
+        self._plot = plot
+
+        self.tk_root = tk.Tk()
+
+        fft_sliders = tk.Frame(self.tk_root)
+        fft_slider_x = tk.Scale(fft_sliders, from_=0, to=plot.w, orient=tk.HORIZONTAL, command=self.scale)
+        fft_slider_x.pack()
+
+        fft_sliders.pack()
+
+        tk.mainloop()
+
+    def scale(self, n):
+        print("SCALE COMMAND", type(n))
+        self._plot.slide_fft_x(int(n))
+
+
 
 
 if __name__ == '__main__':
