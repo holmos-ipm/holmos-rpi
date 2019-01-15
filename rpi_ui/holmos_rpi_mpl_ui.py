@@ -71,6 +71,7 @@ class HolmosPlot:
         self.im_queue = im_pipe
 
         self.load_settings()
+        fft_r_relative = 120/self.w
 
         #self._cam = cam
         self.tk_root = tk.Tk()
@@ -78,24 +79,10 @@ class HolmosPlot:
         Frame = tk.Frame(self.tk_root)
 
         frame_controls = tk.Frame(Frame)
-        frame_mode = tk.LabelFrame(frame_controls, text="Processing Mode")
+        frame_mode = self.make_mode_selector_frame(frame_controls)
+        frame_mode.pack(side=tk.LEFT, anchor="n", padx=5, pady=5)
 
-        val_mode = tk.IntVar()  # needed to make group of Radiobuttons exclusive
-        tk.Radiobutton(frame_mode, text="Camera image", variable=val_mode, value=0, takefocus=True,
-                       command=lambda: self.mode_change(ProcessingStep.STEP_CAM_IMAGE)).pack(anchor="w")
-        tk.Radiobutton(frame_mode, text="FFT", variable=val_mode, value=1, takefocus=True,
-                       command=lambda: self.mode_change(ProcessingStep.STEP_FFT)).pack(anchor="w")
-        tk.Radiobutton(frame_mode, text="Phase image", variable=val_mode, value=2,
-                       command=lambda: self.mode_change(ProcessingStep.STEP_VIS_PHASES_RAW)).pack(anchor="w")
-        frame_mode.pack(side=tk.LEFT, anchor="n")
-
-        frame_fft = tk.Frame(frame_controls)
-        fft_slider_x = tk.Scale(frame_fft, from_=0, to=self.w, orient=tk.HORIZONTAL, command=self.slide_fft_x, label="fft_x", takefocus=True)
-        fft_slider_x.set(self.fft_x)
-        fft_slider_y = tk.Scale(frame_fft, from_=0, to=self.h, orient=tk.HORIZONTAL, command=self.slide_fft_y, label="fft_y", takefocus=True)
-        fft_slider_y.set(self.fft_y)
-        fft_slider_x.pack()
-        fft_slider_y.pack()
+        frame_fft = self.make_fft_slider_frame(frame_controls)
         frame_fft.pack(side=tk.LEFT)
         frame_controls.pack()
 
@@ -107,7 +94,7 @@ class HolmosPlot:
         Frame.pack()
 
         self._ith = ImgToHolo(633e-9, 2e-6)
-        self._ith.set_fft_carrier(None, r=120/self.w)
+        self._ith.set_fft_carrier(None, r=fft_r_relative)
         #self._ith.logger = lambda s: print(s)
         self._ith.halfsize_output = True
 
@@ -202,6 +189,30 @@ class HolmosPlot:
         config.read(self.ini_path)
         self.fft_x = config.getint('DEFAULT', KEY_FFT_X, fallback=int(self.h*.8))
         self.fft_y = config.getint('DEFAULT', KEY_FFT_Y, fallback=int(self.h*.5))
+
+    def make_mode_selector_frame(self, parent):
+        frame_mode = tk.LabelFrame(parent, text="Processing Mode")
+
+        val_mode = tk.IntVar()  # needed to make group of Radiobuttons exclusive
+        tk.Radiobutton(frame_mode, text="Camera image", variable=val_mode, value=0, takefocus=True,
+                       command=lambda: self.mode_change(ProcessingStep.STEP_CAM_IMAGE)).pack(anchor="w")
+        tk.Radiobutton(frame_mode, text="FFT", variable=val_mode, value=1, takefocus=True,
+                       command=lambda: self.mode_change(ProcessingStep.STEP_FFT)).pack(anchor="w")
+        tk.Radiobutton(frame_mode, text="Phase image", variable=val_mode, value=2,
+                       command=lambda: self.mode_change(ProcessingStep.STEP_VIS_PHASES_RAW)).pack(anchor="w")
+        return frame_mode
+
+    def make_fft_slider_frame(self, frame_controls):
+        frame_fft = tk.Frame(frame_controls)
+        fft_slider_x = tk.Scale(frame_fft, from_=0, to=self.w, orient=tk.HORIZONTAL, command=self.slide_fft_x,
+                                label="fft_x", takefocus=True)
+        fft_slider_x.set(self.fft_x)
+        fft_slider_y = tk.Scale(frame_fft, from_=0, to=self.h, orient=tk.HORIZONTAL, command=self.slide_fft_y,
+                                label="fft_y", takefocus=True)
+        fft_slider_y.set(self.fft_y)
+        fft_slider_x.pack()
+        fft_slider_y.pack()
+        return frame_fft
 
 
 class HolmosMain:
