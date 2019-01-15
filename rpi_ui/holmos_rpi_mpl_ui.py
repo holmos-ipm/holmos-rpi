@@ -180,7 +180,7 @@ class HolmosPlot:
     def save_image(self):
         if self.pil_im is not None:
             proposed_filename = time.strftime("holmos %Y-%m-%d %H.%M.%S.png")
-            filename = tk.filedialog.asksaveasfilename(initialfile=proposed_filename)
+            filename = tk.filedialog.asksaveasfilename(initialfile=proposed_filename, initialdir="~")
             if filename:
                 self.pil_im.save(filename)
                 print("saved to {}".format(filename))
@@ -211,7 +211,7 @@ class HolmosPlot:
                        command=lambda: self.mode_change(ProcessingStep.STEP_CAM_IMAGE)).pack(anchor="w")
         tk.Radiobutton(frame_mode, text="FFT", variable=val_mode, value=1, takefocus=True,
                        command=lambda: self.mode_change(ProcessingStep.STEP_FFT)).pack(anchor="w")
-        tk.Radiobutton(frame_mode, text="Phase image", variable=val_mode, value=2,
+        tk.Radiobutton(frame_mode, text="Phase image", variable=val_mode, value=2, takefocus=True,
                        command=lambda: self.mode_change(ProcessingStep.STEP_VIS_PHASES_RAW)).pack(anchor="w")
         return frame_mode
 
