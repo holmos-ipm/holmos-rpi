@@ -37,6 +37,11 @@ KEY_FFT_X = "fft_x"  # TODO: use same as holo-software?
 KEY_FFT_Y = "fft_y"
 
 
+labels_modes = (("Camera image", ProcessingStep.STEP_CAM_IMAGE),
+                ("FFT", ProcessingStep.STEP_FFT),
+                ("Phase image", ProcessingStep.STEP_VIS_PHASES_RAW))
+
+
 class HolmosRequest:
     time_cam_start = None
     time_cam_finish = None
@@ -71,14 +76,28 @@ class HolmosPlot:
         self.tk_root = tk.Tk()
 
         Frame = tk.Frame(self.tk_root)
-        slider_mode = tk.Scale(Frame, from_=0, to=2, orient=tk.HORIZONTAL, command=self.mode_change, label="Mode")
-        fft_slider_x = tk.Scale(Frame, from_=0, to=self.w, orient=tk.HORIZONTAL, command=self.slide_fft_x, label="fft_x")
+
+        frame_controls = tk.Frame(Frame)
+        frame_mode = tk.LabelFrame(frame_controls, text="Processing Mode")
+
+        val_mode = tk.IntVar()  # needed to make group of Radiobuttons exclusive
+        tk.Radiobutton(frame_mode, text="Camera image", variable=val_mode, value=0, takefocus=True,
+                       command=lambda: self.mode_change(ProcessingStep.STEP_CAM_IMAGE)).pack(anchor="w")
+        tk.Radiobutton(frame_mode, text="FFT", variable=val_mode, value=1, takefocus=True,
+                       command=lambda: self.mode_change(ProcessingStep.STEP_FFT)).pack(anchor="w")
+        tk.Radiobutton(frame_mode, text="Phase image", variable=val_mode, value=2,
+                       command=lambda: self.mode_change(ProcessingStep.STEP_VIS_PHASES_RAW)).pack(anchor="w")
+        frame_mode.pack(side=tk.LEFT, anchor="n")
+
+        frame_fft = tk.Frame(frame_controls)
+        fft_slider_x = tk.Scale(frame_fft, from_=0, to=self.w, orient=tk.HORIZONTAL, command=self.slide_fft_x, label="fft_x", takefocus=True)
         fft_slider_x.set(self.fft_x)
-        fft_slider_y = tk.Scale(Frame, from_=0, to=self.h, orient=tk.HORIZONTAL, command=self.slide_fft_y, label="fft_y")
+        fft_slider_y = tk.Scale(frame_fft, from_=0, to=self.h, orient=tk.HORIZONTAL, command=self.slide_fft_y, label="fft_y", takefocus=True)
         fft_slider_y.set(self.fft_y)
-        slider_mode.pack()
         fft_slider_x.pack()
         fft_slider_y.pack()
+        frame_fft.pack(side=tk.LEFT)
+        frame_controls.pack()
 
         self.canvas = tk.Canvas(Frame, height=self.h/2, width=self.w/2)
         self.canvas.place(x=0, y=0)
@@ -148,12 +167,9 @@ class HolmosPlot:
             self.time_last_draw = now
             sys.stdout.flush()
 
-    def mode_change(self, mode):
-        mode_dict = {0: ProcessingStep.STEP_CAM_IMAGE,
-                     1: ProcessingStep.STEP_FFT,
-                     2: ProcessingStep.STEP_VIS_PHASES_RAW}
-        self.processing_step = mode_dict[int(mode)]
-        print("mode", mode)
+    def mode_change(self, step):
+        self.processing_step = step
+        print("mode", self.processing_step)
         sys.stdout.flush()
 
     def slide_fft_x(self, x):
