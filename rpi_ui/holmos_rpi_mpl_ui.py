@@ -19,6 +19,7 @@ import warnings
 import PIL.ImageTk
 import numpy
 import tkinter as tk
+import tkinter.filedialog
 
 from pc_client.holo_globals import ProcessingStep
 from pc_client.img_to_holo import ImgToHolo
@@ -66,6 +67,7 @@ class HolmosPlot:
     processing_step = ProcessingStep.STEP_CAM_IMAGE
     ini_path = "holmos_settings.ini"
     tk_photo = None  # Need to keep reference, otherwise image is deleted and disappears from screen
+    pil_im = None
 
     def __init__(self, im_pipe):
         self.im_queue = im_pipe
@@ -84,6 +86,9 @@ class HolmosPlot:
 
         frame_fft = self.make_fft_slider_frame(frame_controls)
         frame_fft.pack(side=tk.LEFT)
+
+        frame_save = self.make_save_frame(frame_controls)
+        frame_save.pack(side=tk.LEFT)
         frame_controls.pack()
 
         self.canvas = tk.Canvas(Frame, height=self.h/2, width=self.w/2)
@@ -143,8 +148,8 @@ class HolmosPlot:
                 im_result = im_result/2**8
 
             im_result = im_result.astype(numpy.uint8)
-            pil_im = PIL.Image.fromarray(im_result)
-            self.photo = PIL.ImageTk.PhotoImage(image=pil_im)
+            self.pil_im = PIL.Image.fromarray(im_result)
+            self.photo = PIL.ImageTk.PhotoImage(image=self.pil_im)
             self.canvas.itemconfig(self.tk_image, image=self.photo)
 
             self.num_ims += 1
@@ -171,6 +176,14 @@ class HolmosPlot:
         """apply member settings to ITH"""
         self._ith.set_fft_carrier((self.fft_y/self.h, self.fft_x/self.w))
         self.save_settings()
+
+    def save_image(self):
+        if self.pil_im is not None:
+            proposed_filename = time.strftime("holmos %Y-%m-%d %H.%M.%S.png")
+            filename = tk.filedialog.asksaveasfilename(initialfile=proposed_filename)
+            if filename:
+                self.pil_im.save(filename)
+                print("saved to {}".format(filename))
 
     def save_settings(self):
         config = configparser.ConfigParser()
@@ -213,6 +226,11 @@ class HolmosPlot:
         fft_slider_x.pack()
         fft_slider_y.pack()
         return frame_fft
+
+    def make_save_frame(self, frame_controls):
+        frame_save = tk.Frame(frame_controls)
+        tk.Button(frame_save, text="Save current image", command=self.save_image).pack()
+        return frame_save
 
 
 class HolmosMain:
