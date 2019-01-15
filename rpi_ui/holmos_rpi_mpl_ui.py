@@ -77,6 +77,7 @@ class HolmosPlot:
 
         #self._cam = cam
         self.tk_root = tk.Tk()
+        self.tk_root.title("HolMOS")
 
         Frame = tk.Frame(self.tk_root)
 
