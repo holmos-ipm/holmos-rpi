@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-The Holography algorithms are here, in the class ImgToHolo.
+The Holography algorithm are here, in the class ImgToHolo.
 
 No threading, no Qt in here. Indices are Image-like, i.e. y,x (and not Qt-like x,y)
 
 Created on 03.08.2018
 """
-import os
 import time
 
 import numpy
-from pc_client.holo_globals import ProcessingStep
+from algorithm.holo_globals import ProcessingStep
 
 
 class ImgToHolo:

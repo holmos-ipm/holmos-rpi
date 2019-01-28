@@ -7,7 +7,7 @@ import PyQt5.QtGui as QtGui
 import PyQt5.QtCore as QtCore
 import PyQt5.QtWidgets as QtWidgets
 
-from pc_client.holo_globals import ProcessingStep
+from algorithm.holo_globals import ProcessingStep
 
 
 class HolmosClientUI(QtWidgets.QMainWindow):

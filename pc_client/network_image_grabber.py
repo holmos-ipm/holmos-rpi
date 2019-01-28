@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-import enum
 import threading
 import time
 import socket
@@ -16,7 +15,6 @@ import PyQt5.QtWidgets as QtWidgets
 import numpy
 
 from mjpeg_stream_client import get_array_from_mjpeg_stream
-from pc_client.holo_globals import RpiCamMode
 
 
 class RemoteImageGrabber(QtCore.QObject):

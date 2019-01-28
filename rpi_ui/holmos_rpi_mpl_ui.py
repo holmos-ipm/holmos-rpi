@@ -21,8 +21,8 @@ import numpy
 import tkinter as tk
 import tkinter.filedialog
 
-from pc_client.holo_globals import ProcessingStep
-from pc_client.img_to_holo import ImgToHolo
+from algorithm.holo_globals import ProcessingStep
+from algorithm.img_to_holo import ImgToHolo
 
 
 try:

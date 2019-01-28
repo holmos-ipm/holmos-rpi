@@ -10,10 +10,10 @@ import PyQt5.QtCore as QtCore
 import PyQt5.QtGui as QtGui
 import PyQt5.QtWidgets as QtWidgets
 
-from pc_client.holmos_pc_ui import HolmosClientUI, ModeSelector
+from pc_client.holmos_pc_ui import HolmosClientUI
 from pc_client.holmos_pc_worker import HolmosWorker
 from pc_client.network_image_grabber import RemoteImageGrabber
-from pc_client.holo_globals import ProcessingStep
+from algorithm.holo_globals import ProcessingStep
 
 
 class HolmosMainWindoow(HolmosClientUI):

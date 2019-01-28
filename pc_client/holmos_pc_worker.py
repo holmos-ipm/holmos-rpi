@@ -7,10 +7,8 @@ Created on 07.08.2018
 import threading
 
 import PyQt5.QtCore as QtCore
-import PyQt5.QtGui as QtGui
-import PyQt5.QtWidgets as QtWidgets
 
-from pc_client.img_to_holo import ImgToHolo
+from algorithm.img_to_holo import ImgToHolo
 
 
 class HolmosWorker(QtCore.QObject):
