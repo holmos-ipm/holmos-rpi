@@ -150,8 +150,8 @@ class HolmosPlot:
 
             im_result = im_result.astype(numpy.uint8)
             self.pil_im = PIL.Image.fromarray(im_result)
-            self.photo = PIL.ImageTk.PhotoImage(image=self.pil_im)
-            self.canvas.itemconfig(self.tk_image, image=self.photo)
+            self.tk_photo = PIL.ImageTk.PhotoImage(image=self.pil_im)
+            self.canvas.itemconfig(self.tk_image, image=self.tk_photo)
 
             self.num_ims += 1
             now = time.time()
@@ -180,7 +180,7 @@ class HolmosPlot:
 
     def save_image(self):
         if self.pil_im is not None:
-            proposed_filename = time.strftime("holmos %Y-%m-%d %H.%M.%S.png")
+            proposed_filename = time.strftime("holmos_%Y-%m-%d_%H.%M.%S.png")
             filename = tk.filedialog.asksaveasfilename(initialfile=proposed_filename, initialdir="~")
             if filename:
                 self.pil_im.save(filename)
