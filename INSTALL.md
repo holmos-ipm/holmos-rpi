@@ -15,12 +15,12 @@ After a while, the Raspbian Desktop appears.
 ## Software
 
 ### Raspbian Setup
-Af first boot, a Welcome screen appears. Follow the instruction to setup your keyboard, password, and Wifi.
+At first boot, a "welcome screen" appears. Follow the instruction to setup your keyboard, password, and Wifi.
 Updating all packages takes some time, and reboot(s) may be required.
 If updates fail, you may need to setup your proxy first, see below.
 
 Once everything is done, click the raspberry in the upper left and choose "Preferences" -> "Raspberry Pi Configuration".
-Select "Interfaces" at the top, and enable the camera.
+Select "Interfaces" at the top, and enable the camera. You may have to reboot once more.
 
 Now, open a Terminal (black icon at top of screen or Ctrl-Alt-T) and enter `raspistill -f`.
 You should see a full-screen view of the camera.
@@ -34,10 +34,14 @@ sudo nano 10proxy
 ...to create the file `10proxy`, which needs to contain the line `Acquire::http::Proxy "http://153.96.204.21:80/";`, 
 including quotation marks and semicolon - and using the IP:port of your networks proxy.
 
-For all oder programs, edit `/etc/environment` and add the line ```export http_proxy="http://proxyaddress:port/"```
+For all other programs, edit the file `/etc/environment` and add the lines 
+```
+export http_proxy="http://proxyaddress:port/"
+export https_proxy="http://proxyaddress:port/"
+```
 
 ### Holmos Software
-Get a copy ("clone") of this repository by running `git clone https://<git server>/holmos-rpi` in a terminal.
+Get a copy ("clone") of this repository by running `git clone https://github.com/holmos-ipm/holmos-rpi` in a terminal.
 A subfolder to your current folder will be created and the software copied there.
 
 Almost all packages required for the holmos-rpi software are preinstalled. Run 
