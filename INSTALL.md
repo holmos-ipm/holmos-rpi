@@ -15,7 +15,7 @@ After a while, the Raspbian Desktop appears.
 ## Software
 
 ### Raspbian Setup
-Af first boot, a Welcome screen appears. Follow the instruction to setup your keyboard, password, and Wifi.
+At first boot, a "welcome screen" appears. Follow the instruction to setup your keyboard, password, and Wifi.
 Updating all packages takes some time, and reboot(s) may be required.
 If updates fail, you may need to setup your proxy first, see below.
 
