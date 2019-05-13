@@ -50,3 +50,7 @@ Almost all packages required for the holmos-rpi software are preinstalled. Run
 `cd holmos_rpi` to change into that newly created folder
 
 Start the software with `python3 rpi_main.py`
+
+### Optional: Touchscreen
+See the official [instructions](https://www.raspberrypi.org/documentation/hardware/display/README.md). 
+If you mount the screen vertically, display and touchscreen need to be confiugured accordingly. 

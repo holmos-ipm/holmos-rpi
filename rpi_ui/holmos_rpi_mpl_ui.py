@@ -7,7 +7,7 @@ Created on 03.01.2019
 holmos client for direct execution on rpi
 developed for Raspberry Pi 3B
 """
-
+import argparse
 import configparser
 import os
 import sys
@@ -42,6 +42,12 @@ labels_modes = (("Camera image", ProcessingStep.STEP_CAM_IMAGE),
                 ("FFT", ProcessingStep.STEP_FFT),
                 ("Phase image", ProcessingStep.STEP_VIS_PHASES_RAW))
 
+arg_parser = argparse.ArgumentParser(description="Holmos UI for Raspberry Pi")
+arg_parser.add_argument('--size-reduction', dest="size_reduction", default=2, type=int)
+arg_parser.add_argument('--transpose', dest="transpose", default=False, action="store_true")
+args = arg_parser.parse_args()
+print(args)
+
 
 class HolmosRequest:
     time_cam_start = None
@@ -60,7 +66,7 @@ class HolmosRequest:
 
 class HolmosPlot:
     """interactive matplotlib.figure"""
-    w, h = w_full//2, h_full//2  # /2 because resulting images are R-channel only.
+    w, h = w_full//args.size_reduction//2, h_full//args.size_reduction//2  # /2 because resulting images are R-channel only.
     fft_x = int(w*.8)
     fft_y = int(h*.5)
     num_ims = 0
@@ -73,7 +79,7 @@ class HolmosPlot:
         self.im_queue = im_pipe
 
         self.load_settings()
-        fft_r_relative = 120/self.w
+        fft_r_relative = .1
 
         #self._cam = cam
         self.tk_root = tk.Tk()
@@ -92,7 +98,10 @@ class HolmosPlot:
         frame_save.pack(side=tk.LEFT)
         frame_controls.pack()
 
-        self.canvas = tk.Canvas(Frame, height=self.h/2, width=self.w/2)
+        if args.transpose:
+            self.canvas = tk.Canvas(Frame, height=self.w, width=self.h)  # ONLY TRANSPOSE IN FINAL PRINT TO CANVAS!
+        else:
+            self.canvas = tk.Canvas(Frame, height=self.h, width=self.w)
         self.canvas.place(x=0, y=0)
         self.canvas.pack()
 
@@ -101,8 +110,8 @@ class HolmosPlot:
 
         self._ith = ImgToHolo(633e-9, 2e-6)
         self._ith.set_fft_carrier(None, r=fft_r_relative)
-        #self._ith.logger = lambda s: print(s)
-        self._ith.halfsize_output = True
+        self._ith.logger = lambda s: print(s)
+        self._ith.size_reduction = args.size_reduction
 
         self.im = numpy.zeros((self.h, self.w))
 
@@ -125,8 +134,9 @@ class HolmosPlot:
 
     def update_im(self, request):
         assert isinstance(request, HolmosRequest)
-        if request.data.shape != (self.h, self.w):
-            warnings.warn(os.getpid(), "got image of shape {}, expected {}".format(request.data.shape, (self.h, self.w)))
+        if request.data.shape != (h_full//2, w_full//2):
+            # no matter our size reduction, this is always R-channel only, but full resolution -> h_full/2
+            warnings.warn("got image of shape {}, expected {}".format(request.data.shape, (h_full//2, w_full//2)))
         self.im = request.data
 
         if request.data.dtype == numpy.uint16:
@@ -142,13 +152,16 @@ class HolmosPlot:
             if request.processing_step == ProcessingStep.STEP_VIS_PHASES_RAW:
                 im_result += numpy.pi
                 im_result /= 2*numpy.pi
-                im_result *=255
+                im_result *= 255
             request.time_calc_finish = time.time()
 
             if im_result.dtype == numpy.uint16:
                 im_result = im_result/2**8
 
-            im_result = im_result.astype(numpy.uint8)
+            if args.transpose:
+                im_result = im_result.astype(numpy.uint8).transpose()
+            else:
+                im_result = im_result.astype(numpy.uint8)
             self.pil_im = PIL.Image.fromarray(im_result)
             self.tk_photo = PIL.ImageTk.PhotoImage(image=self.pil_im)
             self.canvas.itemconfig(self.tk_image, image=self.tk_photo)
