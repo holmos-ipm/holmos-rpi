@@ -54,7 +54,7 @@ class ImgToHolo:
                                                                    w//2-w_out//2: w//2+w_out//2]))  # center of image shows good fringes for FFT
 
             self.logger("return fft: {:.1f} s".format(time.time()-tic))
-            return self.highlight_fft_carrier(fft)
+            return numpy.log(numpy.abs(fft))
 
         # need forward fft at full resolution; only inverse may (optionally) be at half res
         fft = numpy.fft.fftshift(numpy.fft.fft2(self.cam_image))
@@ -69,7 +69,7 @@ class ImgToHolo:
             return numpy.angle(holo)
 
     def crop_fft(self, fft, size_reduction=None):
-        y, x, ry, rx= self.fft_rect_center_yxrr_px(size_reduction=size_reduction)
+        y, x, ry, rx = self.fft_rect_center_yxrr_px(size_reduction=size_reduction)
         return fft[y-ry:y+ry, x-rx:x+rx]
 
     def move_diffraction_order_to_center(self, fft):
@@ -86,19 +86,14 @@ class ImgToHolo:
         """integer yx coordinates of fft carrier
         if halfsize=None, uses instance member as default"""
         y_rel, x_rel, r_rel = self.fft_carrier_yxr_rel
-        h, w = self.cam_image.shape
         if size_reduction is None:
             size_reduction = self.size_reduction
-        h //= size_reduction
-        w //= size_reduction
-        return int(y_rel*h), int(x_rel*w), int(r_rel*h), int(r_rel*w)
-
-    def highlight_fft_carrier(self, fft):
-        """log of fft; highlight diffcation order."""
-        y, x, ry, rx = self.fft_rect_center_yxrr_px()
-        fft_for_display = numpy.log(numpy.abs(fft))
-        fft_for_display[y-ry:y+ry, x-rx:x+rx] *= 2
-        return fft_for_display
+        h, w = numpy.array(self.cam_image.shape) // size_reduction
+        y = int(y_rel*h)
+        x = int(x_rel*w)
+        ry = min(int(r_rel*h), y, h-y)  # use r_rel*h only if that fits into fft. If y near 0 or h, use smaller ry.
+        rx = min(int(r_rel*w), x, w-x)
+        return y, x, ry, rx
 
 
 if __name__ == '__main__':

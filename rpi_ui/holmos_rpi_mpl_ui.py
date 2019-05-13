@@ -73,6 +73,8 @@ class HolmosPlot:
     processing_step = ProcessingStep.STEP_CAM_IMAGE
     ini_path = "holmos_settings.ini"
     tk_photo = None  # Need to keep reference, otherwise image is deleted and disappears from screen
+    tk_circle = None
+    tk_rect = None
     pil_im = None
 
     def __init__(self, im_pipe):
@@ -166,12 +168,22 @@ class HolmosPlot:
             self.tk_photo = PIL.ImageTk.PhotoImage(image=self.pil_im)
             self.canvas.itemconfig(self.tk_image, image=self.tk_photo)
 
+            self.draw_fft_rect(request.processing_step, self._ith.fft_rect_center_yxrr_px())
+
             self.num_ims += 1
             now = time.time()
             print(os.getpid(), "drew image. Total time since last image: {:.1f}s".format(now - self.time_last_draw))
             print(request)
             self.time_last_draw = now
             sys.stdout.flush()
+
+    def draw_fft_rect(self, step, yxrr_px):
+        self.canvas.delete(self.tk_circle)  # delete works even if object is None
+        self.canvas.delete(self.tk_rect)
+        if step == ProcessingStep.STEP_FFT:
+            y, x, ry, rx = yxrr_px
+            self.tk_circle = self.canvas.create_oval([y-2, x-2, y+2, x+2], fill="blue", outline="")
+            self.tk_rect = self.canvas.create_rectangle([y-ry, x-rx, y+ry, x+rx], outline="blue", width=2)
 
     def mode_change(self, step):
         self.processing_step = step
