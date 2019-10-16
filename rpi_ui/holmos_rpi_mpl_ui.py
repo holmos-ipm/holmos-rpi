@@ -106,6 +106,7 @@ class HolmosPlot:
             self.canvas = tk.Canvas(Frame, height=self.h, width=self.w)
         self.canvas.place(x=0, y=0)
         self.canvas.pack()
+        self.canvas.bind("<Button-1>", self.button_clicked)
 
         self.tk_image = self.canvas.create_image(0, 0, anchor=tk.NW)
         Frame.pack()
@@ -201,6 +202,13 @@ class HolmosPlot:
         self.fft_y = int(y)
         self.set_fft_carrier()
 
+    def button_clicked(self, event: tkinter.Event):
+        if self.processing_step == ProcessingStep.STEP_FFT:
+            self.fft_x = event.x
+            self.fft_y = event.y
+            self.fft_slider_x.set(self.fft_x)
+            self.fft_slider_y.set(self.fft_y)
+
     def set_fft_carrier(self):
         """apply member settings to ITH"""
         self._ith.set_fft_carrier((self.fft_y/self.h, self.fft_x/self.w))
@@ -246,14 +254,14 @@ class HolmosPlot:
 
     def make_fft_slider_frame(self, frame_controls):
         frame_fft = tk.Frame(frame_controls)
-        fft_slider_x = tk.Scale(frame_fft, from_=0, to=self.w, orient=tk.HORIZONTAL, command=self.slide_fft_x,
+        self.fft_slider_x = tk.Scale(frame_fft, from_=0, to=self.w, orient=tk.HORIZONTAL, command=self.slide_fft_x,
                                 label="fft_x", takefocus=True)
-        fft_slider_x.set(self.fft_x)
-        fft_slider_y = tk.Scale(frame_fft, from_=0, to=self.h, orient=tk.HORIZONTAL, command=self.slide_fft_y,
+        self.fft_slider_x.set(self.fft_x)
+        self.fft_slider_y = tk.Scale(frame_fft, from_=0, to=self.h, orient=tk.HORIZONTAL, command=self.slide_fft_y,
                                 label="fft_y", takefocus=True)
-        fft_slider_y.set(self.fft_y)
-        fft_slider_x.pack()
-        fft_slider_y.pack()
+        self.fft_slider_y.set(self.fft_y)
+        self.fft_slider_x.pack()
+        self.fft_slider_y.pack()
         return frame_fft
 
     def make_save_frame(self, frame_controls):
