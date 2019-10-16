@@ -77,6 +77,8 @@ class HolmosPlot:
     tk_rect = None
     pil_im = None
 
+    drawing_rect = False
+
     def __init__(self, im_pipe):
         self.im_queue = im_pipe
 
@@ -86,6 +88,8 @@ class HolmosPlot:
         #self._cam = cam
         self.tk_root = tk.Tk()  # If we are remote and this fails, try setting DISPLAY=:0
         self.tk_root.title("HolMOS")
+        for key in "<Up>", "<Down>", "<Left>", "<Right>":
+            self.tk_root.bind_all(key, self.arrow_key)
 
         Frame = tk.Frame(self.tk_root)
 
@@ -106,7 +110,7 @@ class HolmosPlot:
             self.canvas = tk.Canvas(Frame, height=self.h, width=self.w)
         self.canvas.place(x=0, y=0)
         self.canvas.pack()
-        self.canvas.bind("<Button-1>", self.button_clicked)
+        self.canvas.bind("<Button-1>", self.mouse_clicked)
 
         self.tk_image = self.canvas.create_image(0, 0, anchor=tk.NW)
         Frame.pack()
@@ -179,15 +183,20 @@ class HolmosPlot:
             sys.stdout.flush()
 
     def draw_fft_rect(self, step, yxrr_px):
-        self.canvas.delete(self.tk_circle)  # delete works even if object is None
-        self.canvas.delete(self.tk_rect)
-        if step == ProcessingStep.STEP_FFT:
-            y, x, ry, rx = yxrr_px
-            if args.transpose:
-                y, x = x, y
-                ry, rx = rx, ry
-            self.tk_circle = self.canvas.create_oval([x-2, y-2, x+2, y+2], fill="blue", outline="")
-            self.tk_rect = self.canvas.create_rectangle([x-rx, y-ry, x+rx, y+ry], outline="blue", width=2)
+        # not sure why, but a mutex leads to deadlock here. Instead, drop requests if drawing already
+        if not self.drawing_rect:
+            self.drawing_rect = True
+
+            self.canvas.delete(self.tk_circle)  # delete works even if object is None
+            self.canvas.delete(self.tk_rect)
+            if step == ProcessingStep.STEP_FFT:
+                y, x, ry, rx = yxrr_px
+                if args.transpose:
+                    y, x = x, y
+                    ry, rx = rx, ry
+                self.tk_circle = self.canvas.create_oval([x-2, y-2, x+2, y+2], fill="blue", outline="")
+                self.tk_rect = self.canvas.create_rectangle([x-rx, y-ry, x+rx, y+ry], outline="blue", width=2)
+            self.drawing_rect = False
 
     def mode_change(self, step):
         self.processing_step = step
@@ -202,12 +211,31 @@ class HolmosPlot:
         self.fft_y = int(y)
         self.set_fft_carrier()
 
-    def button_clicked(self, event: tkinter.Event):
+    def mouse_clicked(self, event: tkinter.Event):
         if self.processing_step == ProcessingStep.STEP_FFT:
             self.fft_x = event.x
             self.fft_y = event.y
-            self.fft_slider_x.set(self.fft_x)
-            self.fft_slider_y.set(self.fft_y)
+            self.apply_self_fft()
+
+    def arrow_key(self, event: tkinter.Event):
+        if event.keysym == "Up":
+            self.fft_y -= 1
+        if event.keysym == "Down":
+            self.fft_y += 1
+        if event.keysym == "Left":
+            self.fft_x -= 1
+        if event.keysym == "Right":
+            self.fft_x += 1
+        self.apply_self_fft()
+
+    def apply_self_fft(self):
+        """
+        apply current values of self.fft_x/y to sliders and ith, redraw rectangle if appropriate
+        """
+        self.fft_slider_x.set(self.fft_x)
+        self.fft_slider_y.set(self.fft_y)
+        self.set_fft_carrier()
+        self.draw_fft_rect(self.processing_step, self._ith.fft_rect_center_yxrr_px())
 
     def set_fft_carrier(self):
         """apply member settings to ITH"""
