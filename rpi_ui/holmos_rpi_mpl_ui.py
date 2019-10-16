@@ -16,7 +16,7 @@ import time
 import multiprocessing
 import warnings
 
-import PIL.ImageTk
+import PIL.ImageTk  # if this fails: try "sudo apt-get install python3-pil.imagetk"
 import numpy
 import tkinter as tk
 import tkinter.filedialog
@@ -84,7 +84,7 @@ class HolmosPlot:
         fft_r_relative = .1
 
         #self._cam = cam
-        self.tk_root = tk.Tk()
+        self.tk_root = tk.Tk()  # If we are remote and this fails, try setting DISPLAY=:0
         self.tk_root.title("HolMOS")
 
         Frame = tk.Frame(self.tk_root)
@@ -182,8 +182,11 @@ class HolmosPlot:
         self.canvas.delete(self.tk_rect)
         if step == ProcessingStep.STEP_FFT:
             y, x, ry, rx = yxrr_px
-            self.tk_circle = self.canvas.create_oval([y-2, x-2, y+2, x+2], fill="blue", outline="")
-            self.tk_rect = self.canvas.create_rectangle([y-ry, x-rx, y+ry, x+rx], outline="blue", width=2)
+            if args.transpose:
+                y, x = x, y
+                ry, rx = rx, ry
+            self.tk_circle = self.canvas.create_oval([x-2, y-2, x+2, y+2], fill="blue", outline="")
+            self.tk_rect = self.canvas.create_rectangle([x-rx, y-ry, x+rx, y+ry], outline="blue", width=2)
 
     def mode_change(self, step):
         self.processing_step = step
@@ -213,8 +216,8 @@ class HolmosPlot:
 
     def save_settings(self):
         config = configparser.ConfigParser()
-        config.set('DEFAULT', KEY_FFT_X, str(self.fft_x))
-        config.set('DEFAULT', KEY_FFT_Y, str(self.fft_y))
+        config.set('DEFAULT', KEY_FFT_X, str(self.fft_x*self._ith.size_reduction))
+        config.set('DEFAULT', KEY_FFT_Y, str(self.fft_y*self._ith.size_reduction))
         with open(self.ini_path, 'w') as ini_handle:
             config.write(ini_handle)
 
@@ -226,8 +229,8 @@ class HolmosPlot:
             return
         config = configparser.ConfigParser()
         config.read(self.ini_path)
-        self.fft_x = config.getint('DEFAULT', KEY_FFT_X, fallback=int(self.h*.8))
-        self.fft_y = config.getint('DEFAULT', KEY_FFT_Y, fallback=int(self.h*.5))
+        self.fft_x = config.getint('DEFAULT', KEY_FFT_X, fallback=int(self.h*.8)) // args.size_reduction
+        self.fft_y = config.getint('DEFAULT', KEY_FFT_Y, fallback=int(self.h*.5)) // args.size_reduction
 
     def make_mode_selector_frame(self, parent):
         frame_mode = tk.LabelFrame(parent, text="Processing Mode")
