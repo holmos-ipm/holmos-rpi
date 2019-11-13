@@ -1,10 +1,20 @@
 # Holmos - Code
 
 Holmos is a digital holographic microscope developed at [Fraunhofer IPM](http://ipm.fraunhofer.de) with help from local schools via the [Freiburg Seminar](https://freiburg-seminar.de) and with kind support from the [BMBF](https://www.bmbf.de).
-
 The hardware is based on the Raspberry Pi.
-This repository contains the code running on the Raspberry Pi to evaluate the camera images and calculate phase maps.
-The [hardware repository](https://github.com/holmos-ipm/holmos-hardware/) contains instructions to build your own copy of the setup, and files describing the 3D-printed parts.
+
+The setup was presented at the Conference *Digital Holography and 3D Imaging* in Bordeaux in 2019.
+The [abstract and poster](http://publica.fraunhofer.de/dokumente/N-546165.html) are available online and give an overview of the technical features.
+
+## Repositories
+The holmos-ipm repositories aim to be small, but complete:
+* This repository contains the code running on the Raspberry Pi to evaluate the camera images and calculate phase maps.
+* The [hardware repository](https://github.com/holmos-ipm/holmos-hardware/) contains instructions to build your own copy of the setup, and files describing the 3D-printed parts.
+
+In addition, much of the work that the student groups contributed is documented online, at [https://github.com/holmos-mikroskop/]().
+That repository - especially the [Wiki](https://github.com/holmos-mikroskop/holmos/wiki) - documents the status at the end of the formal project.
+The student repository is in German, and is more thourough and detailed in some places. 
+It will probably not be updated as much as this IPM repository.
 
 ## Installation
 Please see the separate [installation instructions](INSTALL.md) to get the software running on your Raspberry Pi.
