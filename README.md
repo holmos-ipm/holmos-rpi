@@ -11,7 +11,7 @@ The holmos-ipm repositories aim to be small, but complete:
 * This repository contains the code running on the Raspberry Pi to evaluate the camera images and calculate phase maps.
 * The [hardware repository](https://github.com/holmos-ipm/holmos-hardware/) contains instructions to build your own copy of the setup, and files describing the 3D-printed parts.
 
-In addition, much of the work that the student groups contributed is documented online, at [https://github.com/holmos-mikroskop/]().
+In addition, much of the work that the student groups contributed is documented online, at [https://github.com/holmos-mikroskop/](https://github.com/holmos-mikroskop/).
 That repository - especially the [Wiki](https://github.com/holmos-mikroskop/holmos/wiki) - documents the status at the end of the formal project.
 The student repository is in German, and is more thourough and detailed in some places. 
 It will probably not be updated as much as this IPM repository.
