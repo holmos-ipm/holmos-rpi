@@ -51,6 +51,13 @@ Almost all packages required for the holmos-rpi software are preinstalled. Run
 
 Start the software with `python3 rpi_main.py`
 
+If you make it all the way to a (wrapped) phase image saved to a file, you can try to unwrap that image with 
+`python3 rpi_ui/unwrap_ui.py <filename.png>`. 
+The unrwapper might not work right away, unless your phase image is _very_ clean. 
+Try cropping the image or filtering it to remove noise before you unwrap it.
+(This should be integrated into the unwrapper some day). 
+
 ### Optional: Touchscreen
 See the official [instructions](https://www.raspberrypi.org/documentation/hardware/display/README.md). 
 If you mount the screen vertically, display and touchscreen need to be confiugured accordingly. 
+The file `start_touchscreen.sh` starts the software in a resolution suitable for the screen.
