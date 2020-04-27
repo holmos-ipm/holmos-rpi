@@ -23,7 +23,7 @@ import tkinter.filedialog
 
 from algorithm.holo_globals import ProcessingStep
 from algorithm.img_to_holo import ImgToHolo
-
+from rpi_ui import w_full, h_full
 
 try:
     import picamera
@@ -32,7 +32,7 @@ except ImportError:
     print("Could not import picamera. Are we running on a Raspberry Pi?")
     exit()
 
-w_full, h_full = 3280, 2464
+
 
 KEY_FFT_X = "fft_x"  # TODO: use same as holo-software?
 KEY_FFT_Y = "fft_y"

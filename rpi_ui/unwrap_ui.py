@@ -12,7 +12,7 @@ import numpy
 import tkinter as tk
 
 from algorithm.unwrap_fft import unwrap_fft
-from rpi_ui.holmos_rpi_mpl_ui import w_full, h_full
+from rpi_ui import w_full, h_full
 
 
 class HolmosUnwrapUI:
