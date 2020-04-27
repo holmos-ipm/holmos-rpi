@@ -6,6 +6,8 @@ The hardware is based on the Raspberry Pi.
 The setup was presented at the Conference *Digital Holography and 3D Imaging* in Bordeaux in 2019.
 The [abstract and poster](http://publica.fraunhofer.de/dokumente/N-546165.html) are available online and give an overview of the technical features.
 
+An [article](https://www.heise.de/select/make/2020/2/1587411411090155) in the German *Make Magazin* (paywalled) describes the project and gives an overview of the funtionality.
+
 ## Repositories
 The holmos-ipm repositories aim to be small, but complete:
 * This repository contains the code running on the Raspberry Pi to evaluate the camera images and calculate phase maps.
