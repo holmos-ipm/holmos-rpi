@@ -21,11 +21,30 @@ It will probably not be updated as much as this IPM repository.
 ## Installation
 Please see the separate [installation instructions](INSTALL.md) to get the software running on your Raspberry Pi.
 
-## Project Status
-Code and hardware are functional: several people have built copies in Freiburg.
-However, there are probably still gaps in the documentation - if you stumble upon one, feel free to contact us.
-You can open an issue here, or email us.
-(Or improve the instructions yourself and request a merge...)
+## Usage
+Run `rpi_main.py` or one of the `start_??.sh` to start the user interface for live measurements.
+* Raw image: the black/white camera image, useful for navigating the sample/focusing (block the reference beam).
+* FFT: always has a spot in the center, and should have two symmetrical spots (ideally: discs) near the edges.
+  One of these discs needs to be selected by moving the blue rectangle onto it.
+  Click to set the rectangle center, use arrow keys for fine adjustment.
+* Phase image: The extracted phase (optical path length).
+
+The phase images are wrapped (i.e. have jumps at λ or 2π). 
+`start_unwrap_ui.py` provides a very(!) basic unwrapper, but it only works for very clean phase images.
+
+To date, a fancy unwrapper and 3D visualisaion of the phase maps are outside the scope of this project:
+We are striving to keep the code easy to install/run on the RPi.
+
+## Project Status, Contributions
+Code and hardware are functional. 
+The main development phase of HolMOS is complete, we are only reacting to user input from now on.
+Several copies have been built, especially by Freiburg students and readers of the German Make Magazine.
+
+However, there are probably still bugs and gaps in the documentation - if you stumble upon one, feel free to contact us.
+In order of preference:
+* Improve the instructions yourself and request a merge.
+* Open an issue here. This makes question and answer public, helping others.
+* If the above are too difficult for you, write an email.
 
 Please let us know if you attempt to build your own setup - we'd be very excited to hear from you!
 
